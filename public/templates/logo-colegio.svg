@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <!-- Logo del Colegio Estrella del Sur -->
+  <circle cx="60" cy="60" r="58" fill="#1e40af" stroke="#fbbf24" stroke-width="3"/>
+  
+  <!-- Estrella central -->
+  <path d="M 60 25 L 67 47 L 90 47 L 72 61 L 79 83 L 60 69 L 41 83 L 48 61 L 30 47 L 53 47 Z" fill="#fbbf24"/>
+  
+  <!-- Libro abierto -->
+  <rect x="40" y="65" width="40" height="25" rx="2" fill="white"/>
+  <line x1="60" y1="65" x2="60" y2="90" stroke="#1e40af" stroke-width="2"/>
+  <line x1="45" y1="72" x2="55" y2="72" stroke="#1e40af" stroke-width="1.5"/>
+  <line x1="45" y1="77" x2="55" y2="77" stroke="#1e40af" stroke-width="1.5"/>
+  <line x1="45" y1="82" x2="55" y2="82" stroke="#1e40af" stroke-width="1.5"/>
+  <line x1="65" y1="72" x2="75" y2="72" stroke="#1e40af" stroke-width="1.5"/>
+  <line x1="65" y1="77" x2="75" y2="77" stroke="#1e40af" stroke-width="1.5"/>
+  <line x1="65" y1="82" x2="75" y2="82" stroke="#1e40af" stroke-width="1.5"/>
+  
+  <!-- Texto circular -->
+  <path id="circlePath" d="M 20,60 A 40,40 0 1,1 100,60" fill="none"/>
+  <text font-family="Arial" font-size="11" font-weight="bold" fill="white">
+    <textPath href="#circlePath" startOffset="50%" text-anchor="middle">
+      COLEGIO ESTRELLA DEL SUR
+    </textPath>
+  </text>
+</svg>

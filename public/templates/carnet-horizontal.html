@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carnet Estudiantil</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: Arial, sans-serif;
+    }
+    
+    .carnet {
+      width: 8.5cm;
+      height: 5.5cm;
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      border: 2px solid #1e40af;
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Header con logos y nombre del colegio */
+    .header {
+      background: white;
+      height: 1.2cm;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 0.3cm;
+      border-bottom: 3px solid #fbbf24;
+    }
+    
+    .logo {
+      height: 0.9cm;
+      width: 0.9cm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    
+    .school-name {
+      flex: 1;
+      text-align: center;
+      padding: 0 0.2cm;
+    }
+    
+    .school-name h1 {
+      font-size: 0.45cm;
+      color: #1e40af;
+      font-weight: bold;
+      line-height: 1.1;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .school-name p {
+      font-size: 0.25cm;
+      color: #6b7280;
+      margin-top: 0.05cm;
+    }
+    
+    /* Contenido principal */
+    .content {
+      display: flex;
+      padding: 0.3cm;
+      gap: 0.3cm;
+      height: calc(5.5cm - 1.2cm);
+    }
+    
+    /* Foto del estudiante */
+    .photo-container {
+      width: 3cm;
+      height: 4cm;
+      background: white;
+      border: 2px solid white;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .photo-placeholder {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      color: #9ca3af;
+    }
+    
+    .photo-icon {
+      font-size: 1cm;
+      margin-bottom: 0.1cm;
+    }
+    
+    .photo-text {
+      font-size: 0.25cm;
+      text-align: center;
+    }
+    
+    /* Información del estudiante */
+    .info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.15cm;
+      color: white;
+    }
+    
+    .info-field {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 0.15cm 0.25cm;
+      border-radius: 4px;
+      border-left: 3px solid #fbbf24;
+    }
+    
+    .info-label {
+      font-size: 0.25cm;
+      color: #fbbf24;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin-bottom: 0.05cm;
+      letter-spacing: 0.3px;
+    }
+    
+    .info-value {
+      font-size: 0.35cm;
+      font-weight: bold;
+      color: white;
+      line-height: 1.2;
+    }
+    
+    .info-value.nombre {
+      font-size: 0.4cm;
+    }
+    
+    /* Footer decorativo */
+    .footer {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 2cm;
+      height: 2cm;
+      opacity: 0.1;
+    }
+    
+    .footer-circle {
+      width: 100%;
+      height: 100%;
+      background: white;
+      border-radius: 50%;
+      transform: translate(30%, 30%);
+    }
+  </style>
+</head>
+<body>
+  <div class="carnet">
+    <!-- Header con logos y nombre del colegio -->
+    <div class="header">
+      <div class="logo">
+        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAiIGhlaWdodD0iMTIwIiB2aWV3Qm94PSIwIDAgMTIwIDEyMCI+CiAgPCEtLSBMb2dvIGRlbCBDb2xlZ2lvIEVzdHJlbGxhIGRlbCBTdXIgLS0+CiAgPGNpcmNsZSBjeD0iNjAiIGN5PSI2MCIgcj0iNTgiIGZpbGw9IiMxZTQwYWYiIHN0cm9rZT0iI2ZiYmYyNCIgc3Ryb2tlLXdpZHRoPSIzIi8+CiAgPHBhdGggZD0iTSA2MCAyNSBMIDY3IDQ3IEwgOTAgNDcgTCA3MiA2MSBMIDc5IDgzIEwgNjAgNjkgTCA0MSA4MyBMIDQ4IDYxIEwgMzAgNDcgTCA1MyA0NyBaIiBmaWxsPSIjZmJiZjI0Ii8+CiAgPHJlY3QgeD0iNDAiIHk9IjY1IiB3aWR0aD0iNDAiIGhlaWdodD0iMjUiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPgogIDxsaW5lIHgxPSI2MCIgeTE9IjY1IiB4Mj0iNjAiIHkyPSI5MCIgc3Ryb2tlPSIjMWU0MGFmIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8bGluZSB4MT0iNDUiIHkxPSI3MiIgeDI9IjU1IiB5Mj0iNzIiIHN0cm9rZT0iIzFlNDBhZiIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICA8bGluZSB4MT0iNDUiIHkxPSI3NyIgeDI9IjU1IiB5Mj0iNzciIHN0cm9rZT0iIzFlNDBhZiIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICA8bGluZSB4MT0iNDUiIHkxPSI4MiIgeDI9IjU1IiB5Mj0iODIiIHN0cm9rZT0iIzFlNDBhZiIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICA8bGluZSB4MT0iNjUiIHkxPSI3MiIgeDI9Ijc1IiB5Mj0iNzIiIHN0cm9rZT0iIzFlNDBhZiIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICA8bGluZSB4MT0iNjUiIHkxPSI3NyIgeDI9Ijc1IiB5Mj0iNzciIHN0cm9rZT0iIzFlNDBhZiIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICA8bGluZSB4MT0iNjUiIHkxPSI4MiIgeDI9Ijc1IiB5Mj0iODIiIHN0cm9rZT0iIzFlNDBhZiIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICA8cGF0aCBpZD0iY2lyY2xlUGF0aCIgZD0iTSAyMCw2MCBBIDQwLDQwIDAgMSwxIDEwMCw2MCIgZmlsbD0ibm9uZSIvPgogIDx0ZXh0IGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMSIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIj4KICAgIDx0ZXh0UGF0aCBocmVmPSIjY2lyY2xlUGF0aCIgc3RhcnRPZmZzZXQ9IjUwJSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+CiAgICAgIENPTEVHSU8gRVNUUkVMTEEgREVMIFNVUgogICAgPC90ZXh0UGF0aD4KICA8L3RleHQ+Cjwvc3ZnPg==" alt="Logo Colegio">
+      </div>
+      <div class="school-name">
+        <h1>Colegio Estrella del Sur</h1>
+        <p>Carnet Estudiantil</p>
+      </div>
+      <div class="logo">
+        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAiIGhlaWdodD0iMTIwIiB2aWV3Qm94PSIwIDAgMTIwIDEyMCI+CiAgPGNpcmNsZSBjeD0iNjAiIGN5PSI2MCIgcj0iNTgiIGZpbGw9IiNkYzI2MjYiIHN0cm9rZT0iIzk5MWIxYiIgc3Ryb2tlLXdpZHRoPSIzIi8+CiAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNjAsIDYwKSI+CiAgICA8cmVjdCB4PSItMjUiIHk9Ii0xNSIgd2lkdGg9IjUwIiBoZWlnaHQ9IjMwIiBmaWxsPSIjZmVmM2M3IiByeD0iMyIvPgogICAgPHJlY3QgeD0iLTIwIiB5PSItMTAiIHdpZHRoPSI4IiBoZWlnaHQ9IjI1IiBmaWxsPSJ3aGl0ZSIvPgogICAgPHJlY3QgeD0iLTUiIHk9Ii0xMCIgd2lkdGg9IjgiIGhlaWdodD0iMjUiIGZpbGw9IndoaXRlIi8+CiAgICA8cmVjdCB4PSIxMCIgeT0iLTEwIiB3aWR0aD0iOCIgaGVpZ2h0PSIyNSIgZmlsbD0id2hpdGUiLz4KICAgIDxwYXRoIGQ9Ik0gLTMwLC0xNSBMIDAsLTMwIEwgMzAsLTE1IFoiIGZpbGw9IiNmYmJmMjQiLz4KICAgIDxyZWN0IHg9Ii0yIiB5PSItMzUiIHdpZHRoPSI0IiBoZWlnaHQ9IjEwIiBmaWxsPSIjZmJiZjI0Ii8+CiAgICA8cG9seWdvbiBwb2ludHM9IjIsLTM1IDIsLTI1IDEyLC0zMCIgZmlsbD0iI2RjMjYyNiIvPgogIDwvZz4KICA8cGF0aCBpZD0idG9wUGF0aCIgZD0iTSAxNSwyNSBBIDUwLDUwIDAgMCwxIDEwNSwyNSIgZmlsbD0ibm9uZSIvPgogIDx0ZXh0IGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiPgogICAgPHRleHRQYXRoIGhyZWY9IiN0b3BQYXRoIiBzdGFydE9mZnNldD0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4KICAgICAgU0VDUkVUQVLDjUEgREUgRURVQ0FDSMLTTGK4CiAgICA8L3RleHRQYXRoPgogIDwvdGV4dD4KICA8cGF0aCBpZD0iYm90dG9tUGF0aCIgZD0iTSAxMDUsOTUgQSA1MCw1MCAwIDAsMSAxNSw5NSIgZmlsbD0ibm9uZSIvPgogIDx0ZXh0IGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiPgogICAgPHRleHRQYXRoIGhyZWY9IiNib3R0b21QYXRoIiBzdGFydE9mZnNldD0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4KICAgICAgQk9HT1TDoSBELkMuCiAgICA8L3RleHRQYXRoPgogIDwvdGV4dD4KPC9zdmc+" alt="Logo SED">
+      </div>
+    </div>
+    
+    <!-- Contenido principal -->
+    <div class="content">
+      <!-- Foto del estudiante -->
+      <div class="photo-container">
+        <div class="photo-placeholder">
+          <div class="photo-icon">👤</div>
+          <div class="photo-text">3x4 cm</div>
+        </div>
+      </div>
+      
+      <!-- Información del estudiante -->
+      <div class="info">
+        <div class="info-field">
+          <div class="info-label">Nombre</div>
+          <div class="info-value nombre">{{NOMBRES}}</div>
+        </div>
+        
+        <div class="info-field">
+          <div class="info-label">Curso</div>
+          <div class="info-value">{{CURSO}}</div>
+        </div>
+        
+        <div class="info-field">
+          <div class="info-label">Identificación</div>
+          <div class="info-value">{{IDENTIFICACION}}</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Footer decorativo -->
+    <div class="footer">
+      <div class="footer-circle"></div>
+    </div>
+  </div>
+</body>
+</html>

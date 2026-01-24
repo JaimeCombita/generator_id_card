@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <!-- Logo Secretaría de Educación de Bogotá -->
+  <circle cx="60" cy="60" r="58" fill="#dc2626" stroke="#991b1b" stroke-width="3"/>
+  
+  <!-- Escudo/Edificio institucional -->
+  <g transform="translate(60, 60)">
+    <!-- Base del edificio -->
+    <rect x="-25" y="-15" width="50" height="30" fill="#fef3c7" rx="3"/>
+    
+    <!-- Columnas -->
+    <rect x="-20" y="-10" width="8" height="25" fill="white"/>
+    <rect x="-5" y="-10" width="8" height="25" fill="white"/>
+    <rect x="10" y="-10" width="8" height="25" fill="white"/>
+    
+    <!-- Techo -->
+    <path d="M -30,-15 L 0,-30 L 30,-15 Z" fill="#fbbf24"/>
+    
+    <!-- Bandera -->
+    <rect x="-2" y="-35" width="4" height="10" fill="#fbbf24"/>
+    <polygon points="2,-35 2,-25 12,-30" fill="#dc2626"/>
+  </g>
+  
+  <!-- Texto circular superior -->
+  <path id="topPath" d="M 15,25 A 50,50 0 0,1 105,25" fill="none"/>
+  <text font-family="Arial" font-size="9" font-weight="bold" fill="white">
+    <textPath href="#topPath" startOffset="50%" text-anchor="middle">
+      SECRETARÍA DE EDUCACIÓN
+    </textPath>
+  </text>
+  
+  <!-- Texto circular inferior -->
+  <path id="bottomPath" d="M 105,95 A 50,50 0 0,1 15,95" fill="none"/>
+  <text font-family="Arial" font-size="9" font-weight="bold" fill="white">
+    <textPath href="#bottomPath" startOffset="50%" text-anchor="middle">
+      BOGOTÁ D.C.
+    </textPath>
+  </text>
+</svg>
