@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import puppeteer from 'puppeteer';
+import JSZip from 'jszip';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -11,6 +12,8 @@ export async function POST(request: NextRequest) {
     const excelFile = formData.get('excelFile') as File;
     const templateFile = formData.get('templateFile') as File;
     const mode = formData.get('mode') as string; // 'single' o 'multiple'
+    const cardsPerPageParam = formData.get('cardsPerPage');
+    const cardsPerPage = cardsPerPageParam ? Number(cardsPerPageParam) : 8; // por defecto 8 (2x4 en A4)
 
     if (!excelFile || !templateFile) {
       return NextResponse.json(
@@ -30,20 +33,37 @@ export async function POST(request: NextRequest) {
     const decoder = new TextDecoder();
     const templateHtml = decoder.decode(templateBuffer);
 
+    const origin = request.nextUrl.origin;
+
     if (mode === 'single') {
-      const pdf = await generateSinglePDF(data, templateHtml);
-      return new NextResponse(pdf, {
+      const pdf = await generateSinglePDF(data, templateHtml, cardsPerPage, origin);
+      return new NextResponse(new Uint8Array(pdf), {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': 'attachment; filename="carnets_todos.pdf"',
         },
       });
     } else {
-      const pdf = await generateMultiplePDFs(data, templateHtml);
-      return new NextResponse(pdf[0], {
+      const pdfBuffers = await generateMultiplePDFs(data, templateHtml, origin);
+
+      // Crear archivo ZIP con todos los PDFs
+      const zip = new JSZip();
+      pdfBuffers.forEach((buf, idx) => {
+        const student = data[idx] || {};
+        const nombre = (student.nombres || 'carnet').toString().replace(/[^a-zA-Z0-9_\-]/g, '_');
+        const curso = (student.curso || '').toString().replace(/[^a-zA-Z0-9_\-]/g, '_');
+        const identificacion = (student.identificacion || '').toString().replace(/[^a-zA-Z0-9_\-]/g, '_');
+        const filenameBase = [nombre, curso || undefined, identificacion || undefined].filter(Boolean).join('_');
+        const filename = `${filenameBase || `carnet_${idx + 1}`}.pdf`;
+        zip.file(filename, buf);
+      });
+
+      const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+      return new NextResponse(new Uint8Array(zipBuffer), {
         headers: {
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': 'attachment; filename="carnets.pdf"',
+          'Content-Type': 'application/zip',
+          'Content-Disposition': 'attachment; filename="carnets_individuales.zip"',
         },
       });
     }
@@ -57,7 +77,17 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function generateSinglePDF(data: any[], templateHtml: string): Promise<Buffer> {
+function extractStyle(html: string): string {
+  const match = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  return match ? match[1] : '';
+}
+
+function extractBodyInner(html: string): string {
+  const match = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  return match ? match[1] : html;
+}
+
+async function generateSinglePDF(data: any[], templateHtml: string, cardsPerPage: number, baseHref: string): Promise<Buffer> {
   const browser = await puppeteer.launch({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
@@ -65,59 +95,74 @@ async function generateSinglePDF(data: any[], templateHtml: string): Promise<Buf
 
   try {
     const page = await browser.newPage();
-    
-    await page.setViewport({
-      width: 321,
-      height: 208,
-      deviceScaleFactor: 2,
-    });
+    // Vista no es crítica para PDF, pero mantener A4
+    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
 
-    // Crear HTML con todos los carnets
-    let allCarnetsHtml = `
+    // Extraer estilos y contenido de la plantilla
+    const templateStyle = extractStyle(templateHtml);
+    const carnetInner = extractBodyInner(templateHtml);
+
+    // Construir páginas con múltiples carnets por A4
+    const columns = 2; // 2 columnas de 8.5cm
+    const rows = 4; // 4 filas de 5.5cm
+    const perPage = Math.max(1, Math.min(cardsPerPage, columns * rows));
+
+    const pagesHtml: string[] = [];
+    for (let i = 0; i < data.length; i += perPage) {
+      const chunk = data.slice(i, i + perPage);
+      let gridItemsHtml = '';
+      for (const student of chunk) {
+        const cardHtml = carnetInner
+          .replace(/\{\{NOMBRES\}\}/g, student.nombres || '')
+          .replace(/\{\{CURSO\}\}/g, student.curso || '')
+          .replace(/\{\{IDENTIFICACION\}\}/g, student.identificacion || '');
+        gridItemsHtml += `\n${cardHtml}\n`;
+      }
+
+      const pageHtml = `
+        <div class="page">
+          <div class="grid">${gridItemsHtml}</div>
+        </div>
+      `;
+      pagesHtml.push(pageHtml);
+    }
+
+    const allHtml = `
       <!DOCTYPE html>
       <html>
       <head>
-        <meta charset="UTF-8">
+        <meta charset="UTF-8" />
+        <base href="${baseHref}" />
         <style>
-          @page {
-            size: 85mm 55mm;
-            margin: 0;
+          @page { size: A4; margin: 0; }
+          html, body { width: 210mm; height: 297mm; margin: 0; padding: 0; }
+          .page { width: 210mm; height: 297mm; page-break-after: always; display: block; }
+          .grid {
+            width: 210mm; height: 297mm; margin: 0; padding: 0;
+            display: grid;
+            grid-template-columns: repeat(${columns}, 8.5cm);
+            grid-auto-rows: 5.5cm;
+            justify-content: center;
+            align-content: center;
+            gap: 0.5cm;
           }
-          body {
-            margin: 0;
-            padding: 0;
-          }
-          .page-break {
-            page-break-after: always;
-          }
+          /* Estilos originales de la plantilla */
+          ${templateStyle}
         </style>
       </head>
       <body>
+        ${pagesHtml.join('\n')}
+      </body>
+      </html>
     `;
 
-    data.forEach((student, index) => {
-      let carnetHtml = templateHtml
-        .replace(/\{\{NOMBRES\}\}/g, student.nombres || '')
-        .replace(/\{\{CURSO\}\}/g, student.curso || '')
-        .replace(/\{\{IDENTIFICACION\}\}/g, student.identificacion || '');
-      
-      if (index < data.length - 1) {
-        carnetHtml = carnetHtml.replace('</body>', '<div class="page-break"></div></body>');
-      }
-      
-      allCarnetsHtml += carnetHtml;
-    });
-
-    allCarnetsHtml += '</body></html>';
-
-    await page.setContent(allCarnetsHtml, { waitUntil: 'networkidle0' });
+    await page.setContent(allHtml, { waitUntil: 'networkidle0' });
 
     const pdf = await page.pdf({
-      format: undefined,
-      width: '85mm',
-      height: '55mm',
+      format: 'A4',
       printBackground: true,
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
+      preferCSSPageSize: true,
     });
 
     return Buffer.from(pdf);
@@ -126,7 +171,7 @@ async function generateSinglePDF(data: any[], templateHtml: string): Promise<Buf
   }
 }
 
-async function generateMultiplePDFs(data: any[], templateHtml: string): Promise<Buffer[]> {
+async function generateMultiplePDFs(data: any[], templateHtml: string, baseHref: string): Promise<Buffer[]> {
   const pdfs: Buffer[] = [];
   const browser = await puppeteer.launch({
     headless: true,
@@ -134,28 +179,45 @@ async function generateMultiplePDFs(data: any[], templateHtml: string): Promise<
   });
 
   try {
+    const templateStyle = extractStyle(templateHtml);
+    const carnetInner = extractBodyInner(templateHtml);
+
     for (const student of data) {
       const page = await browser.newPage();
-      
-      await page.setViewport({
-        width: 321,
-        height: 208,
-        deviceScaleFactor: 2,
-      });
+      await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
 
-      let carnetHtml = templateHtml
+      const filledCard = carnetInner
         .replace(/\{\{NOMBRES\}\}/g, student.nombres || '')
         .replace(/\{\{CURSO\}\}/g, student.curso || '')
         .replace(/\{\{IDENTIFICACION\}\}/g, student.identificacion || '');
 
-      await page.setContent(carnetHtml, { waitUntil: 'networkidle0' });
+      const a4Html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8" />
+          <base href="${baseHref}" />
+          <style>
+            @page { size: A4; margin: 0; }
+            html, body { width: 210mm; height: 297mm; margin: 0; padding: 0; }
+            body { display: flex; align-items: center; justify-content: center; }
+            /* Estilos originales de la plantilla */
+            ${templateStyle}
+          </style>
+        </head>
+        <body>
+          ${filledCard}
+        </body>
+        </html>
+      `;
+
+      await page.setContent(a4Html, { waitUntil: 'networkidle0' });
 
       const pdf = await page.pdf({
-        format: undefined,
-        width: '85mm',
-        height: '55mm',
+        format: 'A4',
         printBackground: true,
         margin: { top: 0, right: 0, bottom: 0, left: 0 },
+        preferCSSPageSize: true,
       });
 
       pdfs.push(Buffer.from(pdf));
