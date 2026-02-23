@@ -139,7 +139,8 @@ async function launchBrowser() {
   const isVercel = Boolean(process.env.VERCEL);
 
   if (isVercel) {
-    const executablePath = await chromium.executablePath();
+    const chromiumBinPath = path.join(process.cwd(), 'node_modules', '@sparticuz', 'chromium', 'bin');
+    const executablePath = await chromium.executablePath(chromiumBinPath);
     return puppeteer.launch({
       args: chromium.args,
       executablePath,
