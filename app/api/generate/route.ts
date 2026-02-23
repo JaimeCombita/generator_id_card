@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 import JSZip from 'jszip';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -134,11 +135,27 @@ function extractBodyInner(html: string): string {
   return match ? match[1] : html;
 }
 
-async function generateSinglePDF(data: any[], templateHtml: string, cardsPerPage: number, baseHref: string): Promise<Buffer> {
-  const browser = await puppeteer.launch({
+async function launchBrowser() {
+  const isVercel = Boolean(process.env.VERCEL);
+
+  if (isVercel) {
+    const executablePath = await chromium.executablePath();
+    return puppeteer.launch({
+      args: chromium.args,
+      executablePath,
+      headless: true,
+    });
+  }
+
+  return puppeteer.launch({
+    channel: 'chrome',
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
+}
+
+async function generateSinglePDF(data: any[], templateHtml: string, cardsPerPage: number, baseHref: string): Promise<Buffer> {
+  const browser = await launchBrowser();
 
   try {
     const page = await browser.newPage();
@@ -217,10 +234,7 @@ async function generateSinglePDF(data: any[], templateHtml: string, cardsPerPage
 
 async function generateMultiplePDFs(data: any[], templateHtml: string, baseHref: string): Promise<Buffer[]> {
   const pdfs: Buffer[] = [];
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
+  const browser = await launchBrowser();
 
   try {
     const templateStyle = extractStyle(templateHtml);

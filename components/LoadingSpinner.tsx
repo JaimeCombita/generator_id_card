@@ -1,20 +1,39 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+
 interface LoadingSpinnerProps {
   message?: string;
   progress?: number;
 }
 
 export default function LoadingSpinner({ message = 'Procesando...', progress }: LoadingSpinnerProps) {
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  if (!isMounted) {
+    return null;
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center pointer-events-auto">
       <div className="bg-white rounded-2xl p-8 shadow-2xl max-w-md w-full mx-4">
         <div className="flex flex-col items-center">
           <div className="relative">
             <div className="w-20 h-20 border-4 border-indigo-100 rounded-full"></div>
             <div className="w-20 h-20 border-4 border-indigo-600 rounded-full animate-spin border-t-transparent absolute top-0 left-0"></div>
           </div>
-          
+
           <div className="mt-6 text-center">
             <h3 className="text-xl font-bold text-gray-800 mb-2">
               {message}
@@ -31,7 +50,7 @@ export default function LoadingSpinner({ message = 'Procesando...', progress }: 
                 <span>{progress}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full transition-all duration-300"
                   style={{ width: `${progress}%` }}
                 ></div>
@@ -46,6 +65,7 @@ export default function LoadingSpinner({ message = 'Procesando...', progress }: 
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
