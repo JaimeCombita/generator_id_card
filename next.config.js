@@ -4,6 +4,10 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
+    outputFileTracingIncludes: {
+      '/api/generate': ['./node_modules/@sparticuz/chromium/**'],
+      '/api/generate/route': ['./node_modules/@sparticuz/chromium/**'],
+    },
   },
 }
 
