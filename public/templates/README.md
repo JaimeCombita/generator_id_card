@@ -1,12 +1,12 @@
-# Plantilla de Carnet - Colegio Estrella del Sur
+# Plantilla de Carnet - Sistema de Generación de Carnets
 
-Esta carpeta contiene la plantilla de ejemplo del carnet estudiantil.
+Esta carpeta contiene la plantilla por defecto del carnet estudiantil.
 
 ## Archivos incluidos:
 
-- **carnet-horizontal.html** - Plantilla HTML del carnet (9cm x 4.5cm)
-- **logo-colegio.svg** - Logo del Colegio Estrella del Sur
-- **logo-sed.svg** - Logo de la Secretaría de Educación de Bogotá
+- **carnet-horizontal.html** - Plantilla HTML del carnet (8.5cm x 5.5cm)
+- **logo_colegio.jpg** - Logo placeholder del colegio (opcional)
+- **logo_secretaria.jpg** - Logo placeholder de la Secretaría de Educación (opcional)
 
 ## Dimensiones del carnet:
 
@@ -22,7 +22,19 @@ La plantilla usa los siguientes marcadores que serán reemplazados con los datos
 - `{{CURSO}}` - Curso o grado
 - `{{IDENTIFICACION}}` - Número de identificación
 
-## Personalización:
+## Nueva funcionalidad de personalización:
 
-Puedes editar los archivos SVG de los logos para usar los logos reales de tu institución.
-También puedes modificar colores y estilos en el archivo HTML.
+El sistema ahora permite personalizar la plantilla por defecto a través de la interfaz web:
+
+1. **Nombre del Colegio**: Se puede cambiar el nombre que aparece en el carnet
+2. **Logo del Colegio**: Puedes subir tu propio logo que reemplazará el logo por defecto
+3. **Logo de Secretaría**: 
+   - Puedes incluir/excluir el logo de la Secretaría de Educación de Bogotá
+   - Si prefieres no incluirlo, puedes subir el logo de otra alcaldía
+4. **Plantilla personalizada**: También puedes cargar tu propia plantilla HTML completa
+
+## Notas:
+
+- Los logos se convierten automáticamente a base64 para su inclusión en el PDF
+- Si no subes logos personalizados, se usarán los logos por defecto (si existen)
+- Los cambios se aplican en tiempo real durante la generación de carnets

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import puppeteer from 'puppeteer';
 import JSZip from 'jszip';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -10,30 +12,76 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const excelFile = formData.get('excelFile') as File;
-    const templateFile = formData.get('templateFile') as File;
-    const mode = formData.get('mode') as string; // 'single' o 'multiple'
+    const mode = formData.get('mode') as string;
+    const useDefaultTemplate = formData.get('useDefaultTemplate') === 'true';
     const cardsPerPageParam = formData.get('cardsPerPage');
-    const cardsPerPage = cardsPerPageParam ? Number(cardsPerPageParam) : 8; // por defecto 8 (2x4 en A4)
+    const cardsPerPage = cardsPerPageParam ? Number(cardsPerPageParam) : 8;
 
-    if (!excelFile || !templateFile) {
+    let templateHtml: string;
+
+    if (!excelFile) {
       return NextResponse.json(
-        { error: 'Faltan archivos requeridos' },
+        { error: 'Falta el archivo Excel' },
         { status: 400 }
       );
     }
 
-    // Leer archivo Excel
     const excelBuffer = await excelFile.arrayBuffer();
     const workbook = XLSX.read(excelBuffer);
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
     const data: any[] = XLSX.utils.sheet_to_json(worksheet);
 
-    // Leer plantilla HTML
-    const templateBuffer = await templateFile.arrayBuffer();
-    const decoder = new TextDecoder();
-    const templateHtml = decoder.decode(templateBuffer);
-
     const origin = request.nextUrl.origin;
+
+    if (useDefaultTemplate) {
+      const schoolName = formData.get('schoolName') as string || 'Colegio Estrella del Sur';
+      const includeSEDLogo = formData.get('includeSEDLogo') === 'true';
+      const alternativeCityHallLogo = formData.get('alternativeCityHallLogo') as File | null;
+      const schoolLogo = formData.get('schoolLogo') as File | null;
+
+      const templatePath = path.join(process.cwd(), 'public', 'templates', 'carnet-horizontal.html');
+      templateHtml = fs.readFileSync(templatePath, 'utf-8');
+
+      templateHtml = templateHtml.replace(/Colegio Estrella del Sur/g, schoolName);
+
+      let schoolLogoData = '/templates/logo_colegio.jpg';
+      let cityHallLogoData = '/templates/logo_secretaria.jpg';
+
+      if (schoolLogo) {
+        const logoBuffer = await schoolLogo.arrayBuffer();
+        const logoBase64 = Buffer.from(logoBuffer).toString('base64');
+        const mimeType = schoolLogo.type || 'image/jpeg';
+        schoolLogoData = `data:${mimeType};base64,${logoBase64}`;
+      }
+
+      if (!includeSEDLogo) {
+        if (alternativeCityHallLogo) {
+          const logoBuffer = await alternativeCityHallLogo.arrayBuffer();
+          const logoBase64 = Buffer.from(logoBuffer).toString('base64');
+          const mimeType = alternativeCityHallLogo.type || 'image/jpeg';
+          cityHallLogoData = `data:${mimeType};base64,${logoBase64}`;
+        } else {
+          cityHallLogoData = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+        }
+      }
+
+      templateHtml = templateHtml.replace(/\/templates\/logo_colegio\.jpg/g, schoolLogoData);
+      templateHtml = templateHtml.replace(/\/templates\/logo_secretaria\.jpg/g, cityHallLogoData);
+
+    } else {
+      const templateFile = formData.get('templateFile') as File;
+      
+      if (!templateFile) {
+        return NextResponse.json(
+          { error: 'Falta la plantilla' },
+          { status: 400 }
+        );
+      }
+
+      const templateBuffer = await templateFile.arrayBuffer();
+      const decoder = new TextDecoder();
+      templateHtml = decoder.decode(templateBuffer);
+    }
 
     if (mode === 'single') {
       const pdf = await generateSinglePDF(data, templateHtml, cardsPerPage, origin);
@@ -46,7 +94,6 @@ export async function POST(request: NextRequest) {
     } else {
       const pdfBuffers = await generateMultiplePDFs(data, templateHtml, origin);
 
-      // Crear archivo ZIP con todos los PDFs
       const zip = new JSZip();
       pdfBuffers.forEach((buf, idx) => {
         const student = data[idx] || {};
@@ -95,16 +142,13 @@ async function generateSinglePDF(data: any[], templateHtml: string, cardsPerPage
 
   try {
     const page = await browser.newPage();
-    // Vista no es crítica para PDF, pero mantener A4
     await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
 
-    // Extraer estilos y contenido de la plantilla
     const templateStyle = extractStyle(templateHtml);
     const carnetInner = extractBodyInner(templateHtml);
 
-    // Construir páginas con múltiples carnets por A4
-    const columns = 2; // 2 columnas de 8.5cm
-    const rows = 4; // 4 filas de 5.5cm
+    const columns = 2;
+    const rows = 4;
     const perPage = Math.max(1, Math.min(cardsPerPage, columns * rows));
 
     const pagesHtml: string[] = [];

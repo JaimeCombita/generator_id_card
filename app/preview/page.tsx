@@ -6,11 +6,9 @@ export default function PreviewPage() {
   const [htmlContent, setHtmlContent] = useState('');
 
   useEffect(() => {
-    // Cargar la plantilla HTML
     fetch('/templates/carnet-horizontal.html')
       .then(res => res.text())
       .then(html => {
-        // Reemplazar los marcadores con datos de ejemplo
         const preview = html
           .replace('{{NOMBRES}}', 'María Fernanda López García')
           .replace('{{CURSO}}', '10° A')

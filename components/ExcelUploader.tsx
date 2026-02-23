@@ -23,7 +23,6 @@ export default function ExcelUploader({ onFileSelect, onDataParsed }: ExcelUploa
       return;
     }
 
-    // Validar extensión
     const validExtensions = ['.xlsx', '.xls'];
     const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
     
@@ -37,14 +36,12 @@ export default function ExcelUploader({ onFileSelect, onDataParsed }: ExcelUploa
     setFileName(file.name);
     onFileSelect(file);
 
-    // Parsear el archivo Excel
     try {
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const data: any[] = XLSX.utils.sheet_to_json(worksheet);
 
-      // Validar estructura
       if (data.length === 0) {
         setError('El archivo Excel está vacío');
         onDataParsed([]);
@@ -72,13 +69,23 @@ export default function ExcelUploader({ onFileSelect, onDataParsed }: ExcelUploa
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold mb-4">1. Archivo Excel</h2>
-      <p className="text-sm text-gray-600 mb-4">
-        Sube un archivo Excel con las columnas: nombres, curso, identificacion, foto (opcional)
+    <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
+      <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+          1. Archivo Excel
+        </h2>
+      </div>
+      <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
+        📊 Columnas requeridas: <span className="font-semibold text-gray-800">nombres, curso, identificacion</span>
+        <span className="block sm:inline text-gray-500 sm:before:content-['•'] sm:before:mx-2">foto (opcional)</span>
       </p>
 
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+      <div className="border-2 border-dashed border-blue-200 rounded-xl p-4 sm:p-6 md:p-8 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-300 cursor-pointer">
         <input
           type="file"
           accept=".xlsx,.xls"
@@ -90,8 +97,9 @@ export default function ExcelUploader({ onFileSelect, onDataParsed }: ExcelUploa
           htmlFor="excel-upload"
           className="cursor-pointer flex flex-col items-center"
         >
-          <svg
-            className="w-12 h-12 text-gray-400 mb-3"
+          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center mb-3 sm:mb-4">
+            <svg
+              className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -103,21 +111,33 @@ export default function ExcelUploader({ onFileSelect, onDataParsed }: ExcelUploa
               d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
             />
           </svg>
-          <span className="text-sm text-gray-600">
+          </div>
+          <span className="text-xs sm:text-sm font-medium text-gray-700 px-2">
             {fileName || 'Haz clic para seleccionar el archivo Excel'}
           </span>
+          {!fileName && (
+            <span className="text-xs text-gray-500 mt-1">
+              Formatos: .xlsx, .xls
+            </span>
+          )}
         </label>
       </div>
 
       {error && (
-        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-600">
+        <div className="mt-3 p-3 bg-red-50 border-l-4 border-red-500 rounded-lg text-xs sm:text-sm text-red-700 flex items-start gap-2">
+          <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+          </svg>
           {error}
         </div>
       )}
 
       {fileName && !error && (
-        <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-600">
-          ✓ Archivo cargado correctamente
+        <div className="mt-3 p-3 bg-green-50 border-l-4 border-green-500 rounded-lg text-xs sm:text-sm text-green-700 flex items-center gap-2">
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          </svg>
+          <span><strong>Archivo cargado:</strong> {fileName}</span>
         </div>
       )}
     </div>
