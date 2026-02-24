@@ -6,9 +6,11 @@ import * as XLSX from 'xlsx';
 interface ExcelUploaderProps {
   onFileSelect: (file: File | null) => void;
   onDataParsed: (data: any[]) => void;
+  credentialLevel: 'student' | 'business';
+  stepNumber?: number;
 }
 
-export default function ExcelUploader({ onFileSelect, onDataParsed }: ExcelUploaderProps) {
+export default function ExcelUploader({ onFileSelect, onDataParsed, credentialLevel, stepNumber = 1 }: ExcelUploaderProps) {
   const [fileName, setFileName] = useState<string>('');
   const [error, setError] = useState<string>('');
 
@@ -48,7 +50,8 @@ export default function ExcelUploader({ onFileSelect, onDataParsed }: ExcelUploa
         return;
       }
 
-      const requiredColumns = ['nombres', 'curso', 'identificacion'];
+      const roleColumn = credentialLevel === 'business' ? 'cargo' : 'curso';
+      const requiredColumns = ['nombres', roleColumn, 'identificacion'];
       const firstRow = data[0];
       const missingColumns = requiredColumns.filter(
         col => !(col in firstRow)
@@ -77,11 +80,11 @@ export default function ExcelUploader({ onFileSelect, onDataParsed }: ExcelUploa
           </svg>
         </div>
         <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-          1. Archivo Excel
+          {stepNumber}. Archivo Excel
         </h2>
       </div>
       <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
-        📊 Columnas requeridas: <span className="font-semibold text-gray-800">nombres, curso, identificacion</span>
+        📊 Columnas requeridas: <span className="font-semibold text-gray-800">nombres, {credentialLevel === 'business' ? 'cargo' : 'curso'}, identificacion</span>
         <span className="block sm:inline text-gray-500 sm:before:content-['•'] sm:before:mx-2">foto (opcional)</span>
       </p>
 

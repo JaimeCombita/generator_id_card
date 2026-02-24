@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
     const origin = request.nextUrl.origin;
 
     if (useDefaultTemplate) {
+      const credentialLevel = (formData.get('credentialLevel') as string) === 'business' ? 'business' : 'student';
       const schoolName = formData.get('schoolName') as string || 'Colegio Estrella del Sur';
       const includeSEDLogo = formData.get('includeSEDLogo') === 'true';
       const alternativeCityHallLogo = formData.get('alternativeCityHallLogo') as File | null;
@@ -44,6 +45,12 @@ export async function POST(request: NextRequest) {
       templateHtml = fs.readFileSync(templatePath, 'utf-8');
 
       templateHtml = templateHtml.replace(/Colegio Estrella del Sur/g, schoolName);
+      if (credentialLevel === 'business') {
+        templateHtml = templateHtml
+          .replace(/Carnet Estudiantil/g, 'Carnet Empresarial')
+          .replace(/>Curso</g, '>Cargo<')
+          .replace(/Logo Colegio/g, 'Logo Institución');
+      }
 
       let schoolLogoData = '/templates/logo_colegio.jpg';
       let cityHallLogoData = '/templates/logo_secretaria.jpg';
@@ -55,7 +62,9 @@ export async function POST(request: NextRequest) {
         schoolLogoData = `data:${mimeType};base64,${logoBase64}`;
       }
 
-      if (!includeSEDLogo) {
+      if (credentialLevel === 'business') {
+        cityHallLogoData = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+      } else if (!includeSEDLogo) {
         if (alternativeCityHallLogo) {
           const logoBuffer = await alternativeCityHallLogo.arrayBuffer();
           const logoBase64 = Buffer.from(logoBuffer).toString('base64');
@@ -99,7 +108,7 @@ export async function POST(request: NextRequest) {
       pdfBuffers.forEach((buf, idx) => {
         const student = data[idx] || {};
         const nombre = (student.nombres || 'carnet').toString().replace(/[^a-zA-Z0-9_\-]/g, '_');
-        const curso = (student.curso || '').toString().replace(/[^a-zA-Z0-9_\-]/g, '_');
+        const curso = (student.curso || student.cargo || '').toString().replace(/[^a-zA-Z0-9_\-]/g, '_');
         const identificacion = (student.identificacion || '').toString().replace(/[^a-zA-Z0-9_\-]/g, '_');
         const filenameBase = [nombre, curso || undefined, identificacion || undefined].filter(Boolean).join('_');
         const filename = `${filenameBase || `carnet_${idx + 1}`}.pdf`;
@@ -174,9 +183,10 @@ async function generateSinglePDF(data: any[], templateHtml: string, cardsPerPage
       const chunk = data.slice(i, i + perPage);
       let gridItemsHtml = '';
       for (const student of chunk) {
+        const courseOrRole = student.curso || student.cargo || '';
         const cardHtml = carnetInner
           .replace(/\{\{NOMBRES\}\}/g, student.nombres || '')
-          .replace(/\{\{CURSO\}\}/g, student.curso || '')
+          .replace(/\{\{CURSO\}\}/g, courseOrRole)
           .replace(/\{\{IDENTIFICACION\}\}/g, student.identificacion || '');
         gridItemsHtml += `\n${cardHtml}\n`;
       }
@@ -245,9 +255,10 @@ async function generateMultiplePDFs(data: any[], templateHtml: string, baseHref:
       const page = await browser.newPage();
       await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
 
+      const courseOrRole = student.curso || student.cargo || '';
       const filledCard = carnetInner
         .replace(/\{\{NOMBRES\}\}/g, student.nombres || '')
-        .replace(/\{\{CURSO\}\}/g, student.curso || '')
+        .replace(/\{\{CURSO\}\}/g, courseOrRole)
         .replace(/\{\{IDENTIFICACION\}\}/g, student.identificacion || '');
 
       const a4Html = `

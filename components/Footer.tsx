@@ -1,7 +1,16 @@
 'use client';
 
+import { usePathname, useSearchParams } from 'next/navigation';
+
 export default function Footer() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const currentYear = new Date().getFullYear();
+  const isEmbeddedPreview = pathname === '/preview' && searchParams.get('embed') === '1';
+
+  if (isEmbeddedPreview) {
+    return null;
+  }
 
   return (
     <footer className="bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200 mt-auto">

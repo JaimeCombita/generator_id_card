@@ -37,6 +37,7 @@ export default function GenerateOptions({
       formData.append('useDefaultTemplate', useDefaultTemplate.toString());
       
       if (useDefaultTemplate) {
+        formData.append('credentialLevel', templateConfig.credentialLevel);
         formData.append('schoolName', templateConfig.schoolName);
         formData.append('includeSEDLogo', templateConfig.includeSEDLogo.toString());
         
@@ -88,7 +89,7 @@ export default function GenerateOptions({
           </svg>
         </div>
         <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-          {useDefaultTemplate ? '4. Generar Carnets' : '3. Generar Carnets'}
+          {useDefaultTemplate ? '5. Generar Carnets' : '4. Generar Carnets'}
         </h2>
       </div>
       

@@ -1,18 +1,54 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { createPortal } from 'react-dom';
 
 interface TemplateUploaderProps {
   onFileSelect: (file: File | null) => void;
   onDefaultTemplateChange: (useDefault: boolean) => void;
+  credentialLevel: 'student' | 'business';
+  stepNumber?: number;
 }
 
-export default function TemplateUploader({ onFileSelect, onDefaultTemplateChange }: TemplateUploaderProps) {
+export default function TemplateUploader({ onFileSelect, onDefaultTemplateChange, credentialLevel, stepNumber = 2 }: TemplateUploaderProps) {
   const [useDefaultTemplate, setUseDefaultTemplate] = useState<boolean>(true);
   const [fileName, setFileName] = useState<string>('');
   const [preview, setPreview] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [showDetailsModal, setShowDetailsModal] = useState<boolean>(false);
+  const [isMounted, setIsMounted] = useState<boolean>(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (showDetailsModal) {
+      document.body.style.overflow = 'hidden';
+      return;
+    }
+
+    document.body.style.overflow = '';
+
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showDetailsModal]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+
+      if (event.data?.type === 'template-preview:use-template' || event.data?.type === 'template-preview:close') {
+        setShowDetailsModal(false);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   useEffect(() => {
     onDefaultTemplateChange(useDefaultTemplate);
@@ -67,7 +103,7 @@ export default function TemplateUploader({ onFileSelect, onDefaultTemplateChange
           </svg>
         </div>
         <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-          2. Plantilla del Carnet
+          {stepNumber}. Plantilla del Carnet
         </h2>
       </div>
       
@@ -92,9 +128,9 @@ export default function TemplateUploader({ onFileSelect, onDefaultTemplateChange
             <p className="text-sm font-medium text-gray-700">
               Vista previa de la plantilla
             </p>
-            <Link
-              href="/preview"
-              target="_blank"
+            <button
+              type="button"
+              onClick={() => setShowDetailsModal(true)}
               className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700 bg-white px-3 py-1.5 rounded-lg shadow-sm hover:shadow transition-all"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,7 +138,7 @@ export default function TemplateUploader({ onFileSelect, onDefaultTemplateChange
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
               <span>Ver detalles</span>
-            </Link>
+            </button>
           </div>
           
           <div className="flex justify-center overflow-x-auto">
@@ -130,10 +166,10 @@ export default function TemplateUploader({ onFileSelect, onDefaultTemplateChange
                   <div style={{ width: '36px', height: '36px', background: '#e5e7eb', borderRadius: '4px' }}></div>
                   <div style={{ flex: 1, textAlign: 'center', padding: '0 8px' }}>
                     <div style={{ fontSize: '11px', color: '#1e40af', fontWeight: 'bold' }}>
-                      NOMBRE DEL COLEGIO
+                      {credentialLevel === 'business' ? 'NOMBRE DE LA EMPRESA' : 'NOMBRE DEL COLEGIO'}
                     </div>
                     <div style={{ fontSize: '8px', color: '#6b7280', marginTop: '2px' }}>
-                      Carnet Estudiantil
+                      {credentialLevel === 'business' ? 'Carnet Empresarial' : 'Carnet Estudiantil'}
                     </div>
                   </div>
                   <div style={{ width: '36px', height: '36px', background: '#e5e7eb', borderRadius: '4px' }}></div>
@@ -162,7 +198,7 @@ export default function TemplateUploader({ onFileSelect, onDefaultTemplateChange
                       borderLeft: '3px solid #fbbf24',
                     }}>
                       <div style={{ fontSize: '8px', color: '#fbbf24', fontWeight: 'bold' }}>NOMBRE</div>
-                      <div style={{ fontSize: '11px', fontWeight: 'bold', color: 'white' }}>Estudiante Ejemplo</div>
+                      <div style={{ fontSize: '11px', fontWeight: 'bold', color: 'white' }}>{credentialLevel === 'business' ? 'Colaborador Ejemplo' : 'Estudiante Ejemplo'}</div>
                     </div>
                     <div style={{
                       background: 'rgba(255, 255, 255, 0.1)',
@@ -170,8 +206,8 @@ export default function TemplateUploader({ onFileSelect, onDefaultTemplateChange
                       borderRadius: '4px',
                       borderLeft: '3px solid #fbbf24',
                     }}>
-                      <div style={{ fontSize: '8px', color: '#fbbf24', fontWeight: 'bold' }}>CURSO</div>
-                      <div style={{ fontSize: '11px', fontWeight: 'bold', color: 'white' }}>10-A</div>
+                      <div style={{ fontSize: '8px', color: '#fbbf24', fontWeight: 'bold' }}>{credentialLevel === 'business' ? 'CARGO' : 'CURSO'}</div>
+                      <div style={{ fontSize: '11px', fontWeight: 'bold', color: 'white' }}>{credentialLevel === 'business' ? 'Analista' : '10-A'}</div>
                     </div>
                     <div style={{
                       background: 'rgba(255, 255, 255, 0.1)',
@@ -188,7 +224,7 @@ export default function TemplateUploader({ onFileSelect, onDefaultTemplateChange
             </div>
           </div>
           <p className="text-xs text-gray-600 mt-3 sm:mt-4 text-center bg-white/50 px-2 sm:px-3 py-2 rounded-lg">
-            💡 Personaliza el nombre del colegio y los logos en la siguiente sección
+            💡 Personaliza el nombre de la {credentialLevel === 'business' ? 'institución' : 'institución educativa'} y los logos en la siguiente sección
           </p>
         </div>
       ) : (
@@ -257,6 +293,26 @@ export default function TemplateUploader({ onFileSelect, onDefaultTemplateChange
             </div>
           )}
         </>
+      )}
+
+      {isMounted && showDetailsModal && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-2 sm:p-6">
+          <div className="w-full h-[94dvh] sm:w-[80vw] sm:h-[90vh] max-w-7xl overflow-hidden relative rounded-xl sm:rounded-2xl shadow-2xl bg-white border border-white/20">
+            <button
+              type="button"
+              onClick={() => setShowDetailsModal(false)}
+              className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 px-3 py-2 text-xs sm:text-sm font-semibold text-white bg-black/50 border border-white/30 rounded-lg hover:bg-black/70"
+            >
+              Cerrar
+            </button>
+            <iframe
+              title="Vista previa de plantilla"
+              src={`/preview?level=${credentialLevel}&embed=1`}
+              className="w-full h-full border-0"
+            />
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

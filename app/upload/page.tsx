@@ -13,11 +13,25 @@ export default function UploadPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [useDefaultTemplate, setUseDefaultTemplate] = useState(true);
   const [templateConfig, setTemplateConfig] = useState<TemplateConfig>({
+    credentialLevel: 'student',
     schoolName: 'Colegio Estrella del Sur',
     includeSEDLogo: true,
     alternativeCityHallLogo: null,
     schoolLogo: null,
   });
+
+  const isBusiness = templateConfig.credentialLevel === 'business';
+
+  const handleCredentialLevelChange = (level: 'student' | 'business') => {
+    setTemplateConfig((prev) => ({
+      ...prev,
+      credentialLevel: level,
+      includeSEDLogo: level === 'business' ? false : prev.includeSEDLogo,
+      alternativeCityHallLogo: level === 'business' ? null : prev.alternativeCityHallLogo,
+    }));
+    setExcelFile(null);
+    setExcelData([]);
+  };
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4 sm:p-6 md:p-8 relative overflow-hidden">
@@ -41,17 +55,60 @@ export default function UploadPage() {
           </p>
         </div>
 
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-100 mb-6 sm:mb-8 hover:shadow-xl transition-all duration-300">
+          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+            </div>
+            <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              1. Tipo de Carnet
+            </h2>
+          </div>
+          <p className="text-xs sm:text-sm text-gray-600 mb-4 sm:mb-5">
+            Selecciona el tipo para adaptar columnas requeridas, plantilla y detalles.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+            <label className="flex items-center p-3 bg-white rounded-lg border-2 cursor-pointer transition-colors" style={{ borderColor: templateConfig.credentialLevel === 'student' ? '#6366f1' : '#e5e7eb' }}>
+              <input
+                type="radio"
+                name="credentialLevelMain"
+                checked={templateConfig.credentialLevel === 'student'}
+                onChange={() => handleCredentialLevelChange('student')}
+                className="mr-2 w-4 h-4 text-indigo-600"
+              />
+              <span className="text-xs sm:text-sm font-semibold text-gray-800">Estudiantil</span>
+            </label>
+            <label className="flex items-center p-3 bg-white rounded-lg border-2 cursor-pointer transition-colors" style={{ borderColor: templateConfig.credentialLevel === 'business' ? '#6366f1' : '#e5e7eb' }}>
+              <input
+                type="radio"
+                name="credentialLevelMain"
+                checked={templateConfig.credentialLevel === 'business'}
+                onChange={() => handleCredentialLevelChange('business')}
+                className="mr-2 w-4 h-4 text-indigo-600"
+              />
+              <span className="text-xs sm:text-sm font-semibold text-gray-800">Empresarial</span>
+            </label>
+          </div>
+        </div>
+
         <div className="grid md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Excel Uploader */}
           <ExcelUploader 
+            key={`excel-${templateConfig.credentialLevel}`}
             onFileSelect={setExcelFile}
             onDataParsed={setExcelData}
+            credentialLevel={templateConfig.credentialLevel}
+            stepNumber={2}
           />
 
           {/* Template Uploader */}
           <TemplateUploader 
             onFileSelect={setTemplateFile}
             onDefaultTemplateChange={setUseDefaultTemplate}
+            credentialLevel={templateConfig.credentialLevel}
+            stepNumber={3}
           />
         </div>
 
@@ -61,6 +118,9 @@ export default function UploadPage() {
             <TemplateConfiguration 
               useDefaultTemplate={useDefaultTemplate}
               onConfigChange={setTemplateConfig}
+              showCredentialSelector={false}
+              stepNumber={4}
+              credentialLevelOverride={templateConfig.credentialLevel}
             />
           </div>
         )}
@@ -76,7 +136,7 @@ export default function UploadPage() {
               </div>
               <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
                 Vista previa de datos
-                <span className="block sm:inline sm:ml-2 text-xs sm:text-sm font-semibold text-gray-600">({excelData.length} estudiantes)</span>
+                <span className="block sm:inline sm:ml-2 text-xs sm:text-sm font-semibold text-gray-600">({excelData.length} {isBusiness ? 'colaboradores' : 'estudiantes'})</span>
               </h2>
             </div>
             <div className="overflow-x-auto rounded-xl border border-gray-200 -mx-4 sm:mx-0">
@@ -87,7 +147,7 @@ export default function UploadPage() {
                       Nombres
                     </th>
                     <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      Curso
+                      {isBusiness ? 'Cargo' : 'Curso'}
                     </th>
                     <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                       Identificación
@@ -101,7 +161,7 @@ export default function UploadPage() {
                   {excelData.slice(0, 5).map((row, idx) => (
                     <tr key={idx} className="hover:bg-gray-50 transition-colors">
                       <td className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-gray-900">{row.nombres}</td>
-                      <td className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-700">{row.curso}</td>
+                      <td className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-700">{row.curso || row.cargo || ''}</td>
                       <td className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-700">{row.identificacion}</td>
                       <td className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500">
                         {row.foto || 'Sin foto'}
@@ -113,7 +173,7 @@ export default function UploadPage() {
               {excelData.length > 5 && (
                 <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-3 sm:px-4 py-2 sm:py-3 text-center border-t border-gray-200">
                   <p className="text-xs sm:text-sm font-medium text-gray-700">
-                    ... y <span className="font-bold text-indigo-600">{excelData.length - 5}</span> estudiantes más
+                    ... y <span className="font-bold text-indigo-600">{excelData.length - 5}</span> {isBusiness ? 'colaboradores' : 'estudiantes'} más
                   </p>
                 </div>
               )}
