@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import ColorCustomizer, { ColorTheme, PREDEFINED_PALETTES } from './ColorCustomizer';
 
 export interface TemplateConfig {
   credentialLevel: 'student' | 'business';
@@ -8,6 +9,7 @@ export interface TemplateConfig {
   includeSEDLogo: boolean;
   alternativeCityHallLogo: File | null;
   schoolLogo: File | null;
+  colorTheme: ColorTheme;
 }
 
 interface TemplateConfigurationProps {
@@ -32,6 +34,7 @@ export default function TemplateConfiguration({
   const [alternativeLogoPreview, setAlternativeLogoPreview] = useState<string>('');
   const [schoolLogo, setSchoolLogo] = useState<File | null>(null);
   const [schoolLogoPreview, setSchoolLogoPreview] = useState<string>('');
+  const [colorTheme, setColorTheme] = useState<ColorTheme>(PREDEFINED_PALETTES.corporate.colors);
 
   useEffect(() => {
     if (!credentialLevelOverride || credentialLevelOverride === credentialLevel) {
@@ -128,6 +131,7 @@ export default function TemplateConfiguration({
       includeSEDLogo,
       alternativeCityHallLogo,
       schoolLogo,
+      colorTheme,
       ...updates,
     });
   };
@@ -311,6 +315,18 @@ export default function TemplateConfiguration({
               </div>
             )}
           </div>
+        </div>
+
+        {/* Color Customizer */}
+        <div className="border-t-2 border-gray-100 pt-4 sm:pt-6">
+          <ColorCustomizer
+            currentTheme={colorTheme}
+            credentialLevel={credentialLevel}
+            onColorChange={(theme) => {
+              setColorTheme(theme);
+              updateConfig({ colorTheme: theme });
+            }}
+          />
         </div>
       </div>
     </div>

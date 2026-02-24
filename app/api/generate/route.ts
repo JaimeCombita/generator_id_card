@@ -78,6 +78,37 @@ export async function POST(request: NextRequest) {
       templateHtml = templateHtml.replace(/\/templates\/logo_colegio\.jpg/g, schoolLogoData);
       templateHtml = templateHtml.replace(/\/templates\/logo_secretaria\.jpg/g, cityHallLogoData);
 
+      // Aplicar tema de colores si se proporciona
+      const colorThemeStr = formData.get('colorTheme') as string;
+      if (colorThemeStr) {
+        try {
+          const colorTheme = JSON.parse(colorThemeStr);
+          
+          // Mapa de reemplazos de colores (original -> nuevo)
+          const colorMap: Record<string, string> = {
+            '#1e3a8a': colorTheme.gradientStart,
+            '#3b82f6': colorTheme.gradientEnd,
+            '#1e40af': colorTheme.border || colorTheme.titleColor,
+            '#fbbf24': colorTheme.headerBorder || colorTheme.labelColor,
+            '#ffffff': colorTheme.textColor,
+          };
+
+          // Reemplazar colores en la plantilla
+          Object.entries(colorMap).forEach(([original, replacement]) => {
+            const regex = new RegExp(original.replace(/#/g, '\\#'), 'g');
+            templateHtml = templateHtml.replace(regex, replacement);
+          });
+
+          // Reemplazar gradiente completo
+          templateHtml = templateHtml.replace(
+            /linear-gradient\(135deg, #1e3a8a 0%, #3b82f6 100%\)/g,
+            `linear-gradient(135deg, ${colorTheme.gradientStart} 0%, ${colorTheme.gradientEnd} 100%)`
+          );
+        } catch (err) {
+          console.error('Error parsing color theme:', err);
+        }
+      }
+
     } else {
       const templateFile = formData.get('templateFile') as File;
       

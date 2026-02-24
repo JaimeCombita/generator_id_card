@@ -4,6 +4,7 @@ import { useState } from 'react';
 import ExcelUploader from '@/components/ExcelUploader';
 import TemplateUploader from '@/components/TemplateUploader';
 import TemplateConfiguration, { TemplateConfig } from '@/components/TemplateConfiguration';
+import { PREDEFINED_PALETTES } from '@/components/ColorCustomizer';
 import GenerateOptions from '@/components/GenerateOptions';
 
 export default function UploadPage() {
@@ -18,6 +19,7 @@ export default function UploadPage() {
     includeSEDLogo: true,
     alternativeCityHallLogo: null,
     schoolLogo: null,
+    colorTheme: PREDEFINED_PALETTES.corporate.colors,
   });
 
   const isBusiness = templateConfig.credentialLevel === 'business';

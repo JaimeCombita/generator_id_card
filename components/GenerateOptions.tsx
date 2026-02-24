@@ -12,6 +12,7 @@ interface GenerateOptionsProps {
   setIsGenerating: (value: boolean) => void;
   useDefaultTemplate: boolean;
   templateConfig: TemplateConfig;
+  colorTheme?: any;
 }
 
 export default function GenerateOptions({
@@ -40,6 +41,7 @@ export default function GenerateOptions({
         formData.append('credentialLevel', templateConfig.credentialLevel);
         formData.append('schoolName', templateConfig.schoolName);
         formData.append('includeSEDLogo', templateConfig.includeSEDLogo.toString());
+        formData.append('colorTheme', JSON.stringify(templateConfig.colorTheme));
         
         if (templateConfig.alternativeCityHallLogo) {
           formData.append('alternativeCityHallLogo', templateConfig.alternativeCityHallLogo);
