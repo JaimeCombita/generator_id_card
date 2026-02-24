@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function PreviewPage() {
+function PreviewContent() {
   const [htmlContent, setHtmlContent] = useState('');
   const searchParams = useSearchParams();
   const level = searchParams.get('level') === 'business' ? 'business' : 'student';
@@ -85,5 +85,13 @@ export default function PreviewPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function PreviewPage() {
+  return (
+    <Suspense fallback={<main className="bg-gray-100 p-4" />}>
+      <PreviewContent />
+    </Suspense>
   );
 }
