@@ -1,31 +1,100 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { TemplateConfig } from './TemplateConfiguration';
 import LoadingSpinner from './LoadingSpinner';
 
 interface GenerateOptionsProps {
   excelFile: File;
   templateFile: File | null;
+  photosZipFile?: File | null;
+  photosZipById?: Set<string>;
+  capturedPhotosById?: Record<string, string>;
   excelData: any[];
   isGenerating: boolean;
   setIsGenerating: (value: boolean) => void;
   useDefaultTemplate: boolean;
   templateConfig: TemplateConfig;
   colorTheme?: any;
+  stepNumber?: number;
 }
 
 export default function GenerateOptions({
   excelFile,
   templateFile,
+  photosZipFile,
+  photosZipById,
+  capturedPhotosById,
   excelData,
   isGenerating,
   setIsGenerating,
   useDefaultTemplate,
   templateConfig,
+  stepNumber,
 }: GenerateOptionsProps) {
+  const router = useRouter();
   const [mode, setMode] = useState<'single' | 'multiple'>('single');
   const [error, setError] = useState<string>('');
+
+  const normalizeIdentifier = (value: unknown) => {
+    return String(value ?? '')
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .toLowerCase();
+  };
+
+  const buildReport = (downloadFileName: string) => {
+    const availablePhotoIds = new Set<string>(photosZipById ? Array.from(photosZipById) : []);
+    Object.keys(capturedPhotosById || {}).forEach((id) => {
+      availablePhotoIds.add(id);
+    });
+
+    const excelIds = new Set<string>();
+    const missingPhotoIds: string[] = [];
+    let withPhotoCount = 0;
+
+    excelData.forEach((row) => {
+      const id = normalizeIdentifier(row.identificacion);
+      if (!id) {
+        return;
+      }
+
+      excelIds.add(id);
+      if (availablePhotoIds.has(id)) {
+        withPhotoCount += 1;
+      } else {
+        missingPhotoIds.push(String(row.identificacion || 'sin_identificacion'));
+      }
+    });
+
+    const extraZipPhotoIds = photosZipById
+      ? Array.from(photosZipById).filter((id) => !excelIds.has(id))
+      : [];
+
+    const manualPhotosCount = Object.keys(capturedPhotosById || {}).length;
+
+    const total = excelIds.size;
+    const withoutPhotoCount = Math.max(total - withPhotoCount, 0);
+    const coveragePercent = total > 0 ? Math.round((withPhotoCount / total) * 100) : 0;
+
+    return {
+      generatedAt: new Date().toISOString(),
+      mode,
+      downloadFileName,
+      totalRecords: total,
+      photosZipUploaded: Boolean(photosZipFile),
+      photosInZip: photosZipById?.size || 0,
+      manualPhotosCount,
+      withPhotoCount,
+      withoutPhotoCount,
+      coveragePercent,
+      missingPhotoIds,
+      extraZipPhotoIds,
+    };
+  };
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -36,6 +105,14 @@ export default function GenerateOptions({
       formData.append('excelFile', excelFile);
       formData.append('mode', mode);
       formData.append('useDefaultTemplate', useDefaultTemplate.toString());
+
+      if (photosZipFile) {
+        formData.append('photosZip', photosZipFile);
+      }
+
+      if (capturedPhotosById && Object.keys(capturedPhotosById).length > 0) {
+        formData.append('capturedPhotosData', JSON.stringify(capturedPhotosById));
+      }
       
       if (useDefaultTemplate) {
         formData.append('credentialLevel', templateConfig.credentialLevel);
@@ -68,11 +145,16 @@ export default function GenerateOptions({
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = mode === 'single' ? 'carnets_todos.pdf' : 'carnets.zip';
+      const downloadFileName = mode === 'single' ? 'carnets_todos.pdf' : 'carnets.zip';
+      a.download = downloadFileName;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+
+      const report = buildReport(downloadFileName);
+      sessionStorage.setItem('generationReport', JSON.stringify(report));
+      router.push('/report');
 
     } catch (err: any) {
       setError(err.message || 'Error al generar los carnets');
@@ -91,7 +173,7 @@ export default function GenerateOptions({
           </svg>
         </div>
         <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-          {useDefaultTemplate ? '5. Generar Carnets' : '4. Generar Carnets'}
+          {(stepNumber || (useDefaultTemplate ? 6 : 5)) + '. Generar Carnets'}
         </h2>
       </div>
       

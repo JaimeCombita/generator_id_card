@@ -85,7 +85,7 @@ export default function ExcelUploader({ onFileSelect, onDataParsed, credentialLe
       </div>
       <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
         📊 Columnas requeridas: <span className="font-semibold text-gray-800">nombres, {credentialLevel === 'business' ? 'cargo' : 'curso'}, identificacion</span>
-        <span className="block sm:inline text-gray-500 sm:before:content-['•'] sm:before:mx-2">foto (opcional)</span>
+        <span className="block sm:inline text-gray-500 sm:before:content-['•'] sm:before:mx-2">sin columna de foto</span>
       </p>
 
       <div className="border-2 border-dashed border-blue-200 rounded-xl p-4 sm:p-6 md:p-8 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-300 cursor-pointer">

@@ -13,6 +13,8 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const excelFile = formData.get('excelFile') as File;
+    const photosZip = formData.get('photosZip') as File | null;
+    const capturedPhotosData = formData.get('capturedPhotosData') as string | null;
     const mode = formData.get('mode') as string;
     const useDefaultTemplate = formData.get('useDefaultTemplate') === 'true';
     const cardsPerPageParam = formData.get('cardsPerPage');
@@ -31,6 +33,9 @@ export async function POST(request: NextRequest) {
     const workbook = XLSX.read(excelBuffer);
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
     const data: any[] = XLSX.utils.sheet_to_json(worksheet);
+    const zipPhotosMap = await buildPhotosMapByIdentification(photosZip);
+    const capturedPhotosMap = buildCapturedPhotosMapByIdentification(capturedPhotosData);
+    const photosMap = mergePhotosMaps(zipPhotosMap, capturedPhotosMap);
 
     const origin = request.nextUrl.origin;
 
@@ -125,7 +130,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (mode === 'single') {
-      const pdf = await generateSinglePDF(data, templateHtml, cardsPerPage, origin);
+      const pdf = await generateSinglePDF(data, templateHtml, cardsPerPage, origin, photosMap);
       return new NextResponse(new Uint8Array(pdf), {
         headers: {
           'Content-Type': 'application/pdf',
@@ -133,7 +138,7 @@ export async function POST(request: NextRequest) {
         },
       });
     } else {
-      const pdfBuffers = await generateMultiplePDFs(data, templateHtml, origin);
+      const pdfBuffers = await generateMultiplePDFs(data, templateHtml, origin, photosMap);
 
       const zip = new JSZip();
       pdfBuffers.forEach((buf, idx) => {
@@ -195,7 +200,128 @@ async function launchBrowser() {
   });
 }
 
-async function generateSinglePDF(data: any[], templateHtml: string, cardsPerPage: number, baseHref: string): Promise<Buffer> {
+const PHOTO_PLACEHOLDER_HTML = `
+  <div class="photo-placeholder">
+    <div class="photo-icon">👤</div>
+    <div class="photo-text">3x4 cm</div>
+  </div>
+`;
+
+function normalizeIdentifier(value: unknown): string {
+  return String(value ?? '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase();
+}
+
+function getPhotoMimeType(fileName: string): string | null {
+  const extension = path.extname(fileName).toLowerCase();
+
+  switch (extension) {
+    case '.jpg':
+    case '.jpeg':
+      return 'image/jpeg';
+    case '.png':
+      return 'image/png';
+    case '.webp':
+      return 'image/webp';
+    default:
+      return null;
+  }
+}
+
+async function buildPhotosMapByIdentification(photosZip: File | null): Promise<Map<string, string>> {
+  const photosMap = new Map<string, string>();
+
+  if (!photosZip || photosZip.size === 0) {
+    return photosMap;
+  }
+
+  const zipBuffer = await photosZip.arrayBuffer();
+  const zip = await JSZip.loadAsync(zipBuffer);
+
+  for (const [relativePath, zipEntry] of Object.entries(zip.files)) {
+    if (zipEntry.dir) {
+      continue;
+    }
+
+    const mimeType = getPhotoMimeType(relativePath);
+    if (!mimeType) {
+      continue;
+    }
+
+    const baseName = path.basename(relativePath, path.extname(relativePath));
+    const normalizedId = normalizeIdentifier(baseName);
+    if (!normalizedId) {
+      continue;
+    }
+
+    const base64 = await zipEntry.async('base64');
+    photosMap.set(normalizedId, `data:${mimeType};base64,${base64}`);
+  }
+
+  return photosMap;
+}
+
+function buildCapturedPhotosMapByIdentification(rawData: string | null): Map<string, string> {
+  const photosMap = new Map<string, string>();
+
+  if (!rawData) {
+    return photosMap;
+  }
+
+  try {
+    const parsed = JSON.parse(rawData) as Record<string, string>;
+
+    Object.entries(parsed).forEach(([rawId, dataUrl]) => {
+      const normalizedId = normalizeIdentifier(rawId);
+      if (!normalizedId) {
+        return;
+      }
+
+      if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+        return;
+      }
+
+      photosMap.set(normalizedId, dataUrl);
+    });
+  } catch (error) {
+    console.error('Error parsing captured photos data:', error);
+  }
+
+  return photosMap;
+}
+
+function mergePhotosMaps(baseMap: Map<string, string>, overrideMap: Map<string, string>): Map<string, string> {
+  const mergedMap = new Map<string, string>(baseMap);
+
+  overrideMap.forEach((value, key) => {
+    mergedMap.set(key, value);
+  });
+
+  return mergedMap;
+}
+
+function resolvePhotoHtml(student: any, photosMap: Map<string, string>): string {
+  const studentId = normalizeIdentifier(student.identificacion);
+  const photoDataUrl = studentId ? photosMap.get(studentId) : null;
+
+  if (!photoDataUrl) {
+    return PHOTO_PLACEHOLDER_HTML;
+  }
+
+  return `<img src="${photoDataUrl}" alt="Foto" style="width: 100%; height: 100%; object-fit: cover;" />`;
+}
+
+async function generateSinglePDF(
+  data: any[],
+  templateHtml: string,
+  cardsPerPage: number,
+  baseHref: string,
+  photosMap: Map<string, string>
+): Promise<Buffer> {
   const browser = await launchBrowser();
 
   try {
@@ -218,7 +344,8 @@ async function generateSinglePDF(data: any[], templateHtml: string, cardsPerPage
         const cardHtml = carnetInner
           .replace(/\{\{NOMBRES\}\}/g, student.nombres || '')
           .replace(/\{\{CURSO\}\}/g, courseOrRole)
-          .replace(/\{\{IDENTIFICACION\}\}/g, student.identificacion || '');
+          .replace(/\{\{IDENTIFICACION\}\}/g, student.identificacion || '')
+          .replace(/\{\{FOTO_HTML\}\}/g, resolvePhotoHtml(student, photosMap));
         gridItemsHtml += `\n${cardHtml}\n`;
       }
 
@@ -274,7 +401,12 @@ async function generateSinglePDF(data: any[], templateHtml: string, cardsPerPage
   }
 }
 
-async function generateMultiplePDFs(data: any[], templateHtml: string, baseHref: string): Promise<Buffer[]> {
+async function generateMultiplePDFs(
+  data: any[],
+  templateHtml: string,
+  baseHref: string,
+  photosMap: Map<string, string>
+): Promise<Buffer[]> {
   const pdfs: Buffer[] = [];
   const browser = await launchBrowser();
 
@@ -290,7 +422,8 @@ async function generateMultiplePDFs(data: any[], templateHtml: string, baseHref:
       const filledCard = carnetInner
         .replace(/\{\{NOMBRES\}\}/g, student.nombres || '')
         .replace(/\{\{CURSO\}\}/g, courseOrRole)
-        .replace(/\{\{IDENTIFICACION\}\}/g, student.identificacion || '');
+        .replace(/\{\{IDENTIFICACION\}\}/g, student.identificacion || '')
+        .replace(/\{\{FOTO_HTML\}\}/g, resolvePhotoHtml(student, photosMap));
 
       const a4Html = `
         <!DOCTYPE html>

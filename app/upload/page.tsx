@@ -1,15 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import JSZip from 'jszip';
 import ExcelUploader from '@/components/ExcelUploader';
 import TemplateUploader from '@/components/TemplateUploader';
 import TemplateConfiguration, { TemplateConfig } from '@/components/TemplateConfiguration';
 import { PREDEFINED_PALETTES } from '@/components/ColorCustomizer';
 import GenerateOptions from '@/components/GenerateOptions';
 
+function normalizeIdentifier(value: unknown): string {
+  return String(value ?? '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase();
+}
+
+function hasValidImageExtension(fileName: string): boolean {
+  const extension = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
+  return ['.jpg', '.jpeg', '.png', '.webp'].includes(extension);
+}
+
 export default function UploadPage() {
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [templateFile, setTemplateFile] = useState<File | null>(null);
+  const [photosZipFile, setPhotosZipFile] = useState<File | null>(null);
+  const [photosZipById, setPhotosZipById] = useState<Set<string>>(new Set());
+  const [capturedPhotosById, setCapturedPhotosById] = useState<Record<string, string>>({});
+  const [cameraTarget, setCameraTarget] = useState<{ id: string; name: string } | null>(null);
+  const [cameraError, setCameraError] = useState('');
+  const [photosZipError, setPhotosZipError] = useState('');
   const [excelData, setExcelData] = useState<any[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [useDefaultTemplate, setUseDefaultTemplate] = useState(true);
@@ -21,8 +42,74 @@ export default function UploadPage() {
     schoolLogo: null,
     colorTheme: PREDEFINED_PALETTES.corporate.colors,
   });
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const isBusiness = templateConfig.credentialLevel === 'business';
+
+  const availablePhotoIds = useMemo(() => {
+    const ids = new Set<string>(Array.from(photosZipById));
+    Object.keys(capturedPhotosById).forEach((id) => ids.add(id));
+    return ids;
+  }, [photosZipById, capturedPhotosById]);
+
+  const rowsWithoutPhoto = useMemo(() => {
+    return excelData.filter((row) => {
+      const id = normalizeIdentifier(row.identificacion);
+      return id && !availablePhotoIds.has(id);
+    });
+  }, [excelData, availablePhotoIds]);
+
+  const stopCameraStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    if (!cameraTarget) {
+      stopCameraStream();
+      return;
+    }
+
+    let isMounted = true;
+    setCameraError('');
+
+    const startCamera = async () => {
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error('Este navegador no soporta acceso a cámara.');
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user' },
+          audio: false,
+        });
+
+        if (!isMounted) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+      } catch (error: any) {
+        setCameraError(error?.message || 'No fue posible iniciar la cámara.');
+      }
+    };
+
+    startCamera();
+
+    return () => {
+      isMounted = false;
+      stopCameraStream();
+    };
+  }, [cameraTarget]);
 
   const handleCredentialLevelChange = (level: 'student' | 'business') => {
     setTemplateConfig((prev) => ({
@@ -33,6 +120,96 @@ export default function UploadPage() {
     }));
     setExcelFile(null);
     setExcelData([]);
+    setPhotosZipFile(null);
+    setPhotosZipById(new Set());
+    setCapturedPhotosById({});
+  };
+
+  const handlePhotosZipChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setPhotosZipError('');
+
+    if (!file) {
+      setPhotosZipFile(null);
+      setPhotosZipById(new Set());
+      return;
+    }
+
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      setPhotosZipError('El archivo debe ser un ZIP válido (.zip).');
+      setPhotosZipFile(null);
+      setPhotosZipById(new Set());
+      return;
+    }
+
+    try {
+      const zip = await JSZip.loadAsync(await file.arrayBuffer());
+      const detectedIds = new Set<string>();
+
+      Object.values(zip.files).forEach((entry) => {
+        if (entry.dir || !hasValidImageExtension(entry.name)) {
+          return;
+        }
+
+        const fileName = entry.name.split('/').pop() || '';
+        const idWithoutExt = fileName.replace(/\.[^.]+$/, '');
+        const normalizedId = normalizeIdentifier(idWithoutExt);
+
+        if (normalizedId) {
+          detectedIds.add(normalizedId);
+        }
+      });
+
+      setPhotosZipFile(file);
+      setPhotosZipById(detectedIds);
+    } catch (error) {
+      console.error(error);
+      setPhotosZipError('No fue posible leer el ZIP. Verifica que no esté dañado.');
+      setPhotosZipFile(null);
+      setPhotosZipById(new Set());
+    }
+  };
+
+  const openCameraForRow = (row: any) => {
+    const id = normalizeIdentifier(row.identificacion);
+    if (!id) {
+      setCameraError('La identificación no es válida para asociar una foto.');
+      return;
+    }
+
+    setCameraError('');
+    setCameraTarget({ id, name: String(row.nombres || row.identificacion || 'Registro') });
+  };
+
+  const closeCameraModal = () => {
+    setCameraTarget(null);
+    setCameraError('');
+  };
+
+  const capturePhoto = () => {
+    if (!cameraTarget || !videoRef.current) {
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 300;
+    canvas.height = 400;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      setCameraError('No fue posible capturar la imagen.');
+      return;
+    }
+
+    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+    setCapturedPhotosById((prev) => ({
+      ...prev,
+      [cameraTarget.id]: dataUrl,
+    }));
+
+    closeCameraModal();
   };
 
   return (
@@ -127,6 +304,56 @@ export default function UploadPage() {
           </div>
         )}
 
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-100 mb-6 sm:mb-8 hover:shadow-xl transition-all duration-300">
+          <div className="flex items-center gap-2 sm:gap-3 mb-4">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M8 12l4 4m0 0l4-4m-4 4V4" />
+              </svg>
+            </div>
+            <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              {useDefaultTemplate ? '5. Fotos (Opcional)' : '4. Fotos (Opcional)'}
+            </h2>
+          </div>
+
+          <p className="text-xs sm:text-sm text-gray-600 mb-4">
+            Sube un ZIP con fotos nombradas por identificación (ejemplo: <span className="font-semibold">1005234567.jpg</span>).
+            Si no subes ZIP, se usará placeholder automáticamente.
+          </p>
+
+          <input
+            type="file"
+            accept=".zip"
+            onChange={handlePhotosZipChange}
+            className="hidden"
+            id="photos-zip-upload"
+          />
+          <label
+            htmlFor="photos-zip-upload"
+            className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs sm:text-sm font-semibold rounded-lg cursor-pointer transition-colors"
+          >
+            Seleccionar ZIP de fotos
+          </label>
+
+          {photosZipError && (
+            <div className="mt-3 p-3 bg-red-50 border-l-4 border-red-500 rounded-lg text-xs sm:text-sm text-red-700">
+              {photosZipError}
+            </div>
+          )}
+
+          {photosZipFile && !photosZipError && (
+            <div className="mt-3 p-3 bg-green-50 border-l-4 border-green-500 rounded-lg text-xs sm:text-sm text-green-700">
+              ZIP cargado: <span className="font-semibold">{photosZipFile.name}</span> • IDs detectados: <span className="font-semibold">{photosZipById.size}</span>
+            </div>
+          )}
+
+          {Object.keys(capturedPhotosById).length > 0 && (
+            <div className="mt-2 p-3 bg-blue-50 border-l-4 border-blue-500 rounded-lg text-xs sm:text-sm text-blue-700">
+              Fotos capturadas desde cámara: <span className="font-semibold">{Object.keys(capturedPhotosById).length}</span>
+            </div>
+          )}
+        </div>
+
         {/* Preview de datos */}
         {excelData.length > 0 && (
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-100 mb-6 sm:mb-8 hover:shadow-xl transition-all duration-300">
@@ -157,6 +384,9 @@ export default function UploadPage() {
                     <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                       Foto
                     </th>
+                    <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Acción
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -166,7 +396,25 @@ export default function UploadPage() {
                       <td className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-700">{row.curso || row.cargo || ''}</td>
                       <td className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-700">{row.identificacion}</td>
                       <td className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500">
-                        {row.foto || 'Sin foto'}
+                        {(() => {
+                          const id = normalizeIdentifier(row.identificacion);
+                          if (capturedPhotosById[id]) {
+                            return '📷 Capturada';
+                          }
+                          if (photosZipById.has(id)) {
+                            return '✅ ZIP';
+                          }
+                          return photosZipFile ? '❌ No encontrada' : 'Sin foto (placeholder)';
+                        })()}
+                      </td>
+                      <td className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500">
+                        <button
+                          type="button"
+                          onClick={() => openCameraForRow(row)}
+                          className="px-2 py-1 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium"
+                        >
+                          {capturedPhotosById[normalizeIdentifier(row.identificacion)] ? 'Retomar' : 'Tomar foto'}
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -180,6 +428,31 @@ export default function UploadPage() {
                 </div>
               )}
             </div>
+
+            {rowsWithoutPhoto.length > 0 && (
+              <div className="mt-4 p-3 sm:p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                <p className="text-xs sm:text-sm font-semibold text-amber-800 mb-2">
+                  Registros sin foto: {rowsWithoutPhoto.length}
+                </p>
+                <div className="max-h-44 overflow-auto space-y-1">
+                  {rowsWithoutPhoto.slice(0, 20).map((row, index) => (
+                    <div key={`${row.identificacion}-${index}`} className="flex items-center justify-between text-xs sm:text-sm text-amber-900 bg-white/70 rounded-md px-2 py-1">
+                      <span>{row.nombres} • {row.identificacion}</span>
+                      <button
+                        type="button"
+                        onClick={() => openCameraForRow(row)}
+                        className="px-2 py-1 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 font-medium"
+                      >
+                        Tomar foto
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {rowsWithoutPhoto.length > 20 && (
+                  <p className="text-xs text-amber-700 mt-2">Mostrando 20 de {rowsWithoutPhoto.length} registros sin foto.</p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -188,12 +461,54 @@ export default function UploadPage() {
           <GenerateOptions 
             excelFile={excelFile}
             templateFile={templateFile}
+            photosZipFile={photosZipFile}
+            photosZipById={photosZipById}
+            capturedPhotosById={capturedPhotosById}
             excelData={excelData}
             isGenerating={isGenerating}
             setIsGenerating={setIsGenerating}
             useDefaultTemplate={useDefaultTemplate}
             templateConfig={templateConfig}
+            stepNumber={useDefaultTemplate ? 6 : 5}
           />
+        )}
+
+        {cameraTarget && (
+          <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+            <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-4 sm:p-6">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-1">Tomar foto</h3>
+              <p className="text-xs sm:text-sm text-gray-600 mb-4">
+                Registro: <span className="font-semibold">{cameraTarget.name}</span>
+              </p>
+
+              <div className="rounded-xl overflow-hidden bg-gray-900 mb-3">
+                <video ref={videoRef} className="w-full h-64 sm:h-80 object-cover" autoPlay muted playsInline />
+              </div>
+
+              {cameraError && (
+                <div className="mb-3 p-2 rounded-lg bg-red-50 text-red-700 text-xs sm:text-sm border border-red-200">
+                  {cameraError}
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeCameraModal}
+                  className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={capturePhoto}
+                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+                >
+                  Capturar foto
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </main>

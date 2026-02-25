@@ -17,7 +17,13 @@ function PreviewContent() {
         let preview = html
           .replace('{{NOMBRES}}', 'María Fernanda López García')
           .replace('{{CURSO}}', isBusiness ? 'Analista de Operaciones' : '10° A')
-          .replace('{{IDENTIFICACION}}', '1005234567');
+          .replace('{{IDENTIFICACION}}', '1005234567')
+          .replace('{{FOTO_HTML}}', `
+            <div class="photo-placeholder">
+              <div class="photo-icon">👤</div>
+              <div class="photo-text">3x4 cm</div>
+            </div>
+          `);
 
         if (isBusiness) {
           preview = preview

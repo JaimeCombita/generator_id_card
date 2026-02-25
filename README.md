@@ -1,143 +1,129 @@
-# Generador de Carnets Estudiantiles
+# JC Engine - Generador de Carnets
 
-Aplicación Next.js para generar carnets de estudiantes a partir de archivos Excel.
+Aplicación Next.js para generar carnets estudiantiles o empresariales desde Excel, con personalización de plantilla, gestión de fotos y descarga en PDF/ZIP.
 
-## 🚀 Características
+## 🚀 Funcionalidades Implementadas
 
-- ✅ Carga de archivo Excel con datos de estudiantes
-- ✅ Plantilla por defecto personalizable con vista previa
-- ✅ Configuración avanzada de plantilla:
-  - Personalización del nombre del colegio
-  - Opción de incluir/excluir logo de la Secretaría de Educación de Bogotá
-  - Carga de logo alternativo de alcaldía
-  - Carga de logo personalizado del colegio
-- ✅ Soporte para plantillas personalizadas (imagen PNG/JPG o HTML)
-- ✅ Generación de PDFs en dos modos:
-  - Un solo PDF con todos los carnets
-  - PDFs individuales por carnet (ZIP)
-- ✅ Vista previa de datos antes de generar
-- ✅ Interfaz moderna con Tailwind CSS
-- ✅ Conversión automática de logos a base64 para PDFs
+- Carga y validación de archivo Excel (`.xlsx`, `.xls`)
+- Soporte de tipos de carnet:
+  - Estudiantil (`curso`)
+  - Empresarial (`cargo`)
+- Plantilla por defecto personalizable:
+  - Nombre de institución
+  - Logos (institución, SED/alcaldía)
+  - Paleta de colores
+- Soporte para plantilla personalizada (HTML / imagen)
+- Generación de salida:
+  - PDF único con todos los carnets
+  - ZIP con PDFs individuales
+
+### Gestión de Fotos (implementado)
+
+- **Sin columna `foto` en Excel** (ya no es requerida)
+- **ZIP opcional de fotos**:
+  - Carga de `.zip` desde la UX
+  - Matching por `identificacion` (nombre de archivo)
+  - Formatos soportados: `.jpg`, `.jpeg`, `.png`, `.webp`
+- **Captura de foto desde la UX (cámara)** para registros faltantes:
+  - Tomar/retomar foto por registro
+  - Asociación por identificación
+- **Fallback automático a placeholder** cuando no hay foto
+- Tabla de vista previa con estado de foto:
+  - `📷 Capturada`
+  - `✅ ZIP`
+  - `❌ No encontrada`
+  - `Sin foto (placeholder)`
+
+### Reporte post-generación (implementado)
+
+Al finalizar la generación, redirige a `/report` con resumen de:
+
+- Total de carnets procesados
+- Con foto / sin foto
+- Cobertura (%)
+- Fotos detectadas en ZIP
+- Fotos capturadas en UX
+- Identificaciones sin foto
+- IDs en ZIP sin match con Excel
+- Botones de acción:
+  - Generar nuevos carnets
+  - Ir al inicio
 
 ## 📋 Estructura del Excel
 
-Tu archivo Excel debe contener las siguientes columnas:
+Columnas requeridas:
 
-| nombres | curso | identificacion | foto (opcional) |
-|---------|-------|----------------|-----------------|
-| Juan Pérez | 5to A | 12345678 | /ruta/foto.jpg |
-| María López | 5to B | 87654321 | |
+| nombres | curso/cargo | identificacion |
+|---------|-------------|----------------|
+| Juan Pérez | 5to A | 12345678 |
+| María López | Analista | 87654321 |
 
-## 🛠️ Instalación
+## 🔎 SEO y Branding (implementado)
 
-```bash
-# Recomendado: Node 20 LTS
-
-# Instalar dependencias
-npm install
-
-# Ejecutar en desarrollo
-npm run dev
-
-# Compilar para producción
-npm run build
-
-# Ejecutar en producción
-npm start
-```
-
-## 🧯 Solución de error EINVAL en Windows (OneDrive)
-
-Si ves un error como `EINVAL: invalid argument, readlink ... .next ...` al ejecutar `npm run dev` o `npm run build`, el proyecto ya incluye limpieza automática de `.next` antes de iniciar.
-
-Además, usa una versión compatible de Node (recomendado `20.x LTS`).
-
-## 📦 Despliegue en Vercel
-
-1. Sube tu repositorio a GitHub
-2. Importa el proyecto en Vercel
-3. Vercel detectará automáticamente la configuración de Next.js
-4. Deploy automático
+- Metadatos globales con branding de **JC Engine**
+- Metadata por ruta (`/`, `/upload`, `/preview`, `/report`)
+- `robots.txt` dinámico
+- `sitemap.xml` dinámico
+- `manifest.webmanifest`
+- `opengraph-image` dinámico
+- Favicon e iconos configurados desde `public/`
+- Integración opcional de Google Analytics 4
 
 ## ⚙️ Variables de Entorno
 
-Configura estas variables para SEO y analítica:
-
 ```bash
-# URL pública de tu sitio (sin slash final)
+# URL pública del sitio (sin slash final)
 NEXT_PUBLIC_SITE_URL=https://app-carnets.jcengine.co
 
 # ID de Google Analytics 4 (opcional)
 NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
 ```
 
-Con esto la app genera automáticamente:
+## 🛠️ Instalación
 
-- `robots.txt`
-- `sitemap.xml`
-- `manifest.webmanifest`
-- metadatos Open Graph y Twitter
-- script de Google Analytics (si `NEXT_PUBLIC_GA_ID` está definido)
-
-## 🎨 Tecnologías
-
-- Next.js 14 (App Router)
-- TypeScript
-- Tailwind CSS
-- Puppeteer (generación de PDFs desde HTML)
-- xlsx (lectura de Excel)
-- JSZip (compresión de múltiples PDFs)
-
-## 📁 Estructura del Proyecto
-
-```
-/app      - Página de carga de archivos
-  /api/generate          - API para generar PDFs
-/components
-  /ExcelUploader.tsx     - Componente de carga de Excel
-  /TemplateUploader.tsx  - Componente de carga/selección de plantilla
-  /TemplateConfiguration.tsx - Configuración de plantilla por defecto
-  /GenerateOptions.tsx   - Opciones de generación de PDFs
-/public
-  /templates             - Plantillas de carnets y logos
-  /uploads      es       - Plantillas de carnets
-  /uploads         - Archivos temporales
+```bash
+# Recomendado: Node 20 LTS
+npm install
+npm run dev
 ```
 
-## 📝 Uso
+Scripts:
 
-1. Accede a la página principal
-2. Haz clic en "Comenzar"
-3. Sube tu archivo Excel con los datos de estudiantes
-4. Selecciona si deseas usar la plantilla por defecto o una personalizada:
-   
-   **Opción A: Plantilla por defecto**
-   - Marca "Usar plantilla por defecto"
-   - Visualiza la vista previa de la plantilla
-   - Personaliza el nombre del colegio
-   - Decide si incluir el logo de la Secretaría de Educación
-   - Opcionalmente, sube logos personalizados (colegio y/o alcaldía)
-   
-   **Opción B: Plantilla personalizada**
-   - Desmarca "Usar plantilla por defecto"
-   - Sube tu propia plantilla (HTML, PNG o JPG)
-Mejoras Recientes
+```bash
+npm run dev
+npm run build
+npm run start
+```
 
-- ✅ Plantilla por defecto con vista previa interactiva
-- ✅ Personalización del nombre del colegio
-- ✅ Sistema de gestión de logos (colegio y secretaría)
-- ✅ Opción de logo alternativo de alcaldía
-- ✅ Conversión automática de imágenes a base64
+## 🧯 Nota Windows / OneDrive
 
-## 🔮 Próximas Mejoras
+Si aparece error `EINVAL: invalid argument, readlink ... .next ...`, el proyecto ya limpia `.next` automáticamente antes de `dev` y `build`.
 
-- [ ] Soporte para fotos de estudiantes desde el Excel
-- [ ] Editor de plantillas HTML en línea
-- [ ] Historial de generaciones
-- [ ] Personalización de posición de campos con drag & drop
-- [ ] Exportación de plantillas personalizada
-- [ ] Soporte para fotos en el Excel
-- [ ] Editor de plantillas HTML en línea
-- [ ] Generación de ZIP para múltiples PDFs
-- [ ] Historial de generaciones
-- [ ] Personalización de posición de campos
+## 📁 Rutas principales
+
+- `/` landing
+- `/upload` flujo de carga y configuración
+- `/preview` vista previa de plantilla
+- `/report` reporte final post-generación
+- `/api/generate` generación PDF/ZIP
+
+## 🧪 Flujo recomendado de uso
+
+1. Ir a `/upload`
+2. Seleccionar tipo de carnet
+3. Cargar Excel
+4. Elegir plantilla (por defecto o personalizada)
+5. (Opcional) cargar ZIP de fotos
+6. (Opcional) capturar fotos faltantes desde cámara
+7. Generar carnets
+8. Revisar reporte en `/report`
+
+## 🔮 Pendiente / Roadmap
+
+- Exportar reporte como CSV/XLSX
+- Vista de paginación completa para asignación de fotos en lotes grandes
+- Edición manual de plantilla en línea
+- Historial de generaciones por usuario
+- Persistencia de reportes en backend
+- Autenticación y roles
+- Integración con almacenamiento en nube (S3/Cloudinary)
