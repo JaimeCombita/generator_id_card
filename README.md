@@ -31,6 +31,8 @@ Tu archivo Excel debe contener las siguientes columnas:
 ## 🛠️ Instalación
 
 ```bash
+# Recomendado: Node 20 LTS
+
 # Instalar dependencias
 npm install
 
@@ -44,12 +46,38 @@ npm run build
 npm start
 ```
 
+## 🧯 Solución de error EINVAL en Windows (OneDrive)
+
+Si ves un error como `EINVAL: invalid argument, readlink ... .next ...` al ejecutar `npm run dev` o `npm run build`, el proyecto ya incluye limpieza automática de `.next` antes de iniciar.
+
+Además, usa una versión compatible de Node (recomendado `20.x LTS`).
+
 ## 📦 Despliegue en Vercel
 
 1. Sube tu repositorio a GitHub
 2. Importa el proyecto en Vercel
 3. Vercel detectará automáticamente la configuración de Next.js
 4. Deploy automático
+
+## ⚙️ Variables de Entorno
+
+Configura estas variables para SEO y analítica:
+
+```bash
+# URL pública de tu sitio (sin slash final)
+NEXT_PUBLIC_SITE_URL=https://app-carnets.jcengine.co
+
+# ID de Google Analytics 4 (opcional)
+NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
+```
+
+Con esto la app genera automáticamente:
+
+- `robots.txt`
+- `sitemap.xml`
+- `manifest.webmanifest`
+- metadatos Open Graph y Twitter
+- script de Google Analytics (si `NEXT_PUBLIC_GA_ID` está definido)
 
 ## 🎨 Tecnologías
 

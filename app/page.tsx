@@ -1,4 +1,35 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
+
+export const metadata: Metadata = {
+  title: 'Generador de Carnets para Instituciones',
+  description:
+    'Landing oficial de JC Engine para crear carnets profesionales desde Excel. Automatiza generación, personalización y descarga en PDF en minutos.',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'JC Engine | Generador de Carnets para Instituciones',
+    description:
+      'Crea carnets profesionales desde Excel, con personalización de plantilla y exportación en PDF.',
+    url: '/',
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'JC Engine - Generador de Carnets',
+      },
+    ],
+  },
+  twitter: {
+    title: 'JC Engine | Generador de Carnets para Instituciones',
+    description:
+      'Automatiza la creación de carnets con JC Engine: carga Excel, personaliza plantilla y descarga PDF.',
+    images: ['/opengraph-image'],
+  },
+};
 
 export default function Home() {
   return (
@@ -14,13 +45,18 @@ export default function Home() {
         <div className="max-w-5xl w-full">
           {/* Header principal */}
           <div className="text-center mb-8 sm:mb-10 md:mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-4 sm:mb-6 shadow-xl">
-              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
-              </svg>
+            <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-2xl mb-4 sm:mb-6 shadow-xl border border-gray-100 p-2">
+              <Image
+                src="/logo-optimizado.png"
+                alt="Logo JC Engine"
+                width={96}
+                height={96}
+                className="w-full h-full object-contain"
+                priority
+              />
             </div>
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-3 sm:mb-4 px-4">
-              Generador de Carnets
+              JC Engine - Generador de Carnets
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-gray-600 font-medium px-4">
               Profesionales y personalizados en minutos
