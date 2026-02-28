@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
 import JSZip from 'jszip';
 import ExcelUploader from '@/components/ExcelUploader';
 import TemplateUploader from '@/components/TemplateUploader';
@@ -29,6 +30,11 @@ export default function UploadPage() {
   const [photosZipById, setPhotosZipById] = useState<Set<string>>(new Set());
   const [capturedPhotosById, setCapturedPhotosById] = useState<Record<string, string>>({});
   const [cameraTarget, setCameraTarget] = useState<{ id: string; name: string } | null>(null);
+  const [photoActionStep, setPhotoActionStep] = useState<'chooser' | 'camera' | null>(null);
+  const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('environment');
+  const [previewFilter, setPreviewFilter] = useState<'all' | 'missing'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const [photosZipError, setPhotosZipError] = useState('');
   const [excelData, setExcelData] = useState<any[]>([]);
@@ -44,6 +50,7 @@ export default function UploadPage() {
   });
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const photoPickerInputRef = useRef<HTMLInputElement | null>(null);
 
   const isBusiness = templateConfig.credentialLevel === 'business';
 
@@ -60,6 +67,40 @@ export default function UploadPage() {
     });
   }, [excelData, availablePhotoIds]);
 
+  const filteredRows = useMemo(() => {
+    return previewFilter === 'missing' ? rowsWithoutPhoto : excelData;
+  }, [excelData, rowsWithoutPhoto, previewFilter]);
+
+  const rowsPerPage = isMobileViewport ? 5 : 10;
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
+
+  const previewRows = useMemo(() => {
+    const start = (currentPage - 1) * rowsPerPage;
+    return filteredRows.slice(start, start + rowsPerPage);
+  }, [filteredRows, currentPage, rowsPerPage]);
+
+  const visiblePageNumbers = useMemo(() => {
+    const maxVisible = 5;
+    if (totalPages <= maxVisible) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+
+    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    const end = Math.min(totalPages, start + maxVisible - 1);
+    start = Math.max(1, end - maxVisible + 1);
+
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  }, [totalPages, currentPage]);
+
+  const isMobileDevice = useMemo(() => {
+    if (typeof navigator === 'undefined') {
+      return false;
+    }
+
+    return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }, []);
+
   const stopCameraStream = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
@@ -68,7 +109,38 @@ export default function UploadPage() {
   };
 
   useEffect(() => {
-    if (!cameraTarget) {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(max-width: 639px)');
+    const handleMediaQueryChange = (event: MediaQueryListEvent) => {
+      setIsMobileViewport(event.matches);
+    };
+
+    setIsMobileViewport(mediaQuery.matches);
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleMediaQueryChange);
+      return () => mediaQuery.removeEventListener('change', handleMediaQueryChange);
+    }
+
+    mediaQuery.addListener(handleMediaQueryChange);
+    return () => mediaQuery.removeListener(handleMediaQueryChange);
+  }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [previewFilter, rowsPerPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  useEffect(() => {
+    if (!cameraTarget || photoActionStep !== 'camera') {
       stopCameraStream();
       return;
     }
@@ -82,10 +154,21 @@ export default function UploadPage() {
           throw new Error('Este navegador no soporta acceso a cámara.');
         }
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user' },
-          audio: false,
-        });
+        stopCameraStream();
+
+        let stream: MediaStream;
+
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { exact: cameraFacingMode } },
+            audio: false,
+          });
+        } catch {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: cameraFacingMode },
+            audio: false,
+          });
+        }
 
         if (!isMounted) {
           stream.getTracks().forEach((track) => track.stop());
@@ -109,7 +192,7 @@ export default function UploadPage() {
       isMounted = false;
       stopCameraStream();
     };
-  }, [cameraTarget]);
+  }, [cameraTarget, cameraFacingMode, photoActionStep]);
 
   const handleCredentialLevelChange = (level: 'student' | 'business') => {
     setTemplateConfig((prev) => ({
@@ -178,12 +261,23 @@ export default function UploadPage() {
     }
 
     setCameraError('');
+    setCameraFacingMode(isMobileDevice ? 'environment' : 'user');
     setCameraTarget({ id, name: String(row.nombres || row.identificacion || 'Registro') });
+    setPhotoActionStep('chooser');
   };
 
   const closeCameraModal = () => {
     setCameraTarget(null);
+    setPhotoActionStep(null);
     setCameraError('');
+  };
+
+  const chooseTakePhoto = () => {
+    setPhotoActionStep('camera');
+  };
+
+  const chooseDevicePhoto = () => {
+    photoPickerInputRef.current?.click();
   };
 
   const capturePhoto = () => {
@@ -210,6 +304,43 @@ export default function UploadPage() {
     }));
 
     closeCameraModal();
+  };
+
+  const handlePhotoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+
+    if (!cameraTarget || !file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setCameraError('Selecciona un archivo de imagen válido.');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      if (typeof dataUrl !== 'string') {
+        setCameraError('No fue posible procesar la imagen seleccionada.');
+        return;
+      }
+
+      setCapturedPhotosById((prev) => ({
+        ...prev,
+        [cameraTarget.id]: dataUrl,
+      }));
+
+      closeCameraModal();
+    };
+
+    reader.onerror = () => {
+      setCameraError('No fue posible leer la imagen seleccionada.');
+    };
+
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   return (
@@ -363,11 +494,46 @@ export default function UploadPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                 </svg>
               </div>
-              <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                Vista previa de datos
-                <span className="block sm:inline sm:ml-2 text-xs sm:text-sm font-semibold text-gray-600">({excelData.length} {isBusiness ? 'colaboradores' : 'estudiantes'})</span>
-              </h2>
+              <div className="flex-1">
+                <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                  Vista previa y registros sin foto
+                </h2>
+                <p className="text-xs sm:text-sm font-semibold text-gray-600">
+                  {excelData.length} {isBusiness ? 'colaboradores' : 'estudiantes'} • Sin foto: {rowsWithoutPhoto.length}
+                </p>
+              </div>
             </div>
+
+            <div className="mb-4 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+              <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setPreviewFilter('all')}
+                  className="flex-1 sm:flex-none px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-colors"
+                  style={{
+                    backgroundColor: previewFilter === 'all' ? '#eef2ff' : 'transparent',
+                    color: previewFilter === 'all' ? '#4338ca' : '#374151',
+                  }}
+                >
+                  Todos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewFilter('missing')}
+                  className="flex-1 sm:flex-none px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-colors"
+                  style={{
+                    backgroundColor: previewFilter === 'missing' ? '#fffbeb' : 'transparent',
+                    color: previewFilter === 'missing' ? '#92400e' : '#374151',
+                  }}
+                >
+                  Sin foto ({rowsWithoutPhoto.length})
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                Mostrando {previewRows.length} de {filteredRows.length}
+              </p>
+            </div>
+
             <div className="overflow-x-auto rounded-xl border border-gray-200 -mx-4 sm:mx-0">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
@@ -390,7 +556,7 @@ export default function UploadPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {excelData.slice(0, 5).map((row, idx) => (
+                  {previewRows.map((row, idx) => (
                     <tr key={idx} className="hover:bg-gray-50 transition-colors">
                       <td className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-gray-900">{row.nombres}</td>
                       <td className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-700">{row.curso || row.cargo || ''}</td>
@@ -420,39 +586,54 @@ export default function UploadPage() {
                   ))}
                 </tbody>
               </table>
-              {excelData.length > 5 && (
-                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-3 sm:px-4 py-2 sm:py-3 text-center border-t border-gray-200">
-                  <p className="text-xs sm:text-sm font-medium text-gray-700">
-                    ... y <span className="font-bold text-indigo-600">{excelData.length - 5}</span> {isBusiness ? 'colaboradores' : 'estudiantes'} más
+
+              {previewRows.length === 0 && (
+                <div className="px-3 sm:px-4 py-4 text-center text-xs sm:text-sm text-gray-500 bg-white">
+                  No hay registros para mostrar en este filtro.
+                </div>
+              )}
+
+              {filteredRows.length > rowsPerPage && (
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-3 sm:px-4 py-2 sm:py-3 border-t border-gray-200 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+                  <p className="text-xs sm:text-sm font-medium text-gray-700 text-center sm:text-left">
+                    Página <span className="font-bold text-indigo-600">{currentPage}</span> de <span className="font-bold text-indigo-600">{totalPages}</span>
                   </p>
+                  <div className="flex items-center justify-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="px-2 py-1 rounded-md text-xs sm:text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Anterior
+                    </button>
+                    {visiblePageNumbers.map((page) => (
+                      <button
+                        key={page}
+                        type="button"
+                        onClick={() => setCurrentPage(page)}
+                        className="min-w-8 px-2 py-1 rounded-md text-xs sm:text-sm font-semibold border"
+                        style={{
+                          backgroundColor: page === currentPage ? '#e0e7ff' : '#ffffff',
+                          borderColor: page === currentPage ? '#a5b4fc' : '#e5e7eb',
+                          color: page === currentPage ? '#3730a3' : '#374151',
+                        }}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-2 py-1 rounded-md text-xs sm:text-sm font-medium bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
-
-            {rowsWithoutPhoto.length > 0 && (
-              <div className="mt-4 p-3 sm:p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                <p className="text-xs sm:text-sm font-semibold text-amber-800 mb-2">
-                  Registros sin foto: {rowsWithoutPhoto.length}
-                </p>
-                <div className="max-h-44 overflow-auto space-y-1">
-                  {rowsWithoutPhoto.slice(0, 20).map((row, index) => (
-                    <div key={`${row.identificacion}-${index}`} className="flex items-center justify-between text-xs sm:text-sm text-amber-900 bg-white/70 rounded-md px-2 py-1">
-                      <span>{row.nombres} • {row.identificacion}</span>
-                      <button
-                        type="button"
-                        onClick={() => openCameraForRow(row)}
-                        className="px-2 py-1 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-900 font-medium"
-                      >
-                        Tomar foto
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                {rowsWithoutPhoto.length > 20 && (
-                  <p className="text-xs text-amber-700 mt-2">Mostrando 20 de {rowsWithoutPhoto.length} registros sin foto.</p>
-                )}
-              </div>
-            )}
           </div>
         )}
 
@@ -473,7 +654,53 @@ export default function UploadPage() {
           />
         )}
 
-        {cameraTarget && (
+        <input
+          ref={photoPickerInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handlePhotoFileSelect}
+          className="hidden"
+        />
+
+        {cameraTarget && photoActionStep === 'chooser' && (
+          <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-4 sm:p-6">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-1">Agregar foto</h3>
+              <p className="text-xs sm:text-sm text-gray-600 mb-4">
+                Registro: <span className="font-semibold">{cameraTarget.name}</span>
+              </p>
+
+              <div className="space-y-2 mb-4">
+                <button
+                  type="button"
+                  onClick={chooseTakePhoto}
+                  className="w-full px-4 py-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm"
+                >
+                  Tomar foto
+                </button>
+                <button
+                  type="button"
+                  onClick={chooseDevicePhoto}
+                  className="w-full px-4 py-3 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold text-sm border border-purple-200"
+                >
+                  Seleccionar desde dispositivo
+                </button>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={closeCameraModal}
+                  className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {cameraTarget && photoActionStep === 'camera' && (
           <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
             <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-4 sm:p-6">
               <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-1">Tomar foto</h3>
@@ -481,8 +708,26 @@ export default function UploadPage() {
                 Registro: <span className="font-semibold">{cameraTarget.name}</span>
               </p>
 
-              <div className="rounded-xl overflow-hidden bg-gray-900 mb-3">
+              <div className="rounded-xl overflow-hidden bg-gray-900 mb-3 relative">
                 <video ref={videoRef} className="w-full h-64 sm:h-80 object-cover" autoPlay muted playsInline />
+
+                {isMobileDevice && (
+                  <button
+                    type="button"
+                    onClick={() => setCameraFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'))}
+                    className="absolute top-3 right-3 w-12 h-12 rounded-full bg-black/65 border-2 border-white/90 text-white flex items-center justify-center shadow-lg"
+                    aria-label="Cambiar cámara"
+                    title="Cambiar cámara"
+                  >
+                    <Image
+                      src="/icons/camera-switch.svg"
+                      alt="Cambiar cámara"
+                      width={28}
+                      height={28}
+                      className="w-7 h-7"
+                    />
+                  </button>
+                )}
               </div>
 
               {cameraError && (

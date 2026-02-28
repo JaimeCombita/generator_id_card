@@ -37,6 +37,33 @@ export default function GenerateOptions({
   const [mode, setMode] = useState<'single' | 'multiple'>('single');
   const [error, setError] = useState<string>('');
 
+  const getFileNameFromDisposition = (disposition: string | null, fallback: string) => {
+    if (!disposition) {
+      return fallback;
+    }
+
+    const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) {
+      try {
+        return decodeURIComponent(utf8Match[1]);
+      } catch {
+        return utf8Match[1];
+      }
+    }
+
+    const normalMatch = disposition.match(/filename="?([^";]+)"?/i);
+    return normalMatch?.[1] || fallback;
+  };
+
+  const isIOSLikeDevice = () => {
+    if (typeof navigator === 'undefined') {
+      return false;
+    }
+
+    return /iPad|iPhone|iPod/.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  };
+
   const normalizeIdentifier = (value: unknown) => {
     return String(value ?? '')
       .trim()
@@ -142,15 +169,28 @@ export default function GenerateOptions({
       }
 
       const blob = await response.blob();
+      const defaultFileName = mode === 'single' ? 'carnets_todos.pdf' : 'carnets_individuales.zip';
+      const downloadFileName = getFileNameFromDisposition(
+        response.headers.get('content-disposition'),
+        defaultFileName
+      );
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const downloadFileName = mode === 'single' ? 'carnets_todos.pdf' : 'carnets.zip';
-      a.download = downloadFileName;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+
+      if (isIOSLikeDevice()) {
+        window.location.assign(url);
+      } else {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = downloadFileName;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+
+      window.setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 60_000);
 
       const report = buildReport(downloadFileName);
       sessionStorage.setItem('generationReport', JSON.stringify(report));

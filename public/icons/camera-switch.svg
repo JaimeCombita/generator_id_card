@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Cambiar cámara">
+  <defs>
+    <style>
+      .ink { fill: #111111; stroke: #111111; }
+      .line { fill: none; stroke: #111111; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+
+  <!-- Circular arrows -->
+  <path class="line" d="M21 50A45 45 0 0 1 101 35"/>
+  <path class="ink" d="M96 20l21 8-13 18z"/>
+
+  <path class="line" d="M107 78A45 45 0 0 1 27 93"/>
+  <path class="ink" d="M32 108l-21-8 13-18z"/>
+
+  <!-- Camera body -->
+  <path class="ink" d="M33 46h18l5-8a6 6 0 0 1 5-3h17a6 6 0 0 1 5 3l5 8h7a10 10 0 0 1 10 10v30a10 10 0 0 1-10 10H33a10 10 0 0 1-10-10V56a10 10 0 0 1 10-10z"/>
+
+  <!-- Lens -->
+  <circle cx="64" cy="71" r="17" fill="none" stroke="#f5f5f5" stroke-width="5"/>
+
+  <!-- Viewfinder dot -->
+  <circle cx="90" cy="58" r="3" fill="#f5f5f5"/>
+</svg>
