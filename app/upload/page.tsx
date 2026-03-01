@@ -715,16 +715,16 @@ export default function UploadPage() {
                   <button
                     type="button"
                     onClick={() => setCameraFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'))}
-                    className="absolute top-3 right-3 w-12 h-12 rounded-full bg-black/65 border-2 border-white/90 text-white flex items-center justify-center shadow-lg"
+                    className="absolute bottom-3 right-3 w-12 h-12 rounded-full bg-black/85 text-white flex items-center justify-center shadow-xl"
                     aria-label="Cambiar cámara"
                     title="Cambiar cámara"
                   >
                     <Image
                       src="/icons/camera-switch.svg"
                       alt="Cambiar cámara"
-                      width={28}
-                      height={28}
-                      className="w-7 h-7"
+                      width={32}
+                      height={32}
+                      className="w-8 h-8"
                     />
                   </button>
                 )}
