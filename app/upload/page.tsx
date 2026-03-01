@@ -722,9 +722,9 @@ export default function UploadPage() {
                     <Image
                       src="/icons/camera-switch.svg"
                       alt="Cambiar cámara"
-                      width={32}
-                      height={32}
-                      className="w-8 h-8"
+                      width={34}
+                      height={34}
+                      className="w-[34px] h-[34px]"
                     />
                   </button>
                 )}
