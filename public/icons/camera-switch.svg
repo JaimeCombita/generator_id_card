@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Cambiar cámara">
   <defs>
     <style>
-      .ink { fill: #111111; stroke: #111111; }
-      .line { fill: none; stroke: #111111; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
+      .ink { fill: #ffffff; stroke: #ffffff; }
+      .line { fill: none; stroke: #ffffff; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
     </style>
   </defs>
 

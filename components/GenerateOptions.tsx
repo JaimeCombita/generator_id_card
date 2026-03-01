@@ -64,6 +64,64 @@ export default function GenerateOptions({
       || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   };
 
+  const triggerAnchorDownload = (url: string, fileName: string, openInNewTab = false) => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.rel = 'noopener noreferrer';
+
+    if (openInNewTab) {
+      a.target = '_blank';
+    } else {
+      a.download = fileName;
+    }
+
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const downloadGeneratedFile = async (blob: Blob, fileName: string) => {
+    const fileType = blob.type || (fileName.toLowerCase().endsWith('.zip') ? 'application/zip' : 'application/pdf');
+    const url = window.URL.createObjectURL(blob);
+
+    try {
+      if (isIOSLikeDevice()) {
+        const file = new File([blob], fileName, { type: fileType });
+        const mobileNavigator = navigator as Navigator & {
+          canShare?: (data?: ShareData) => boolean;
+        };
+
+        if (
+          typeof mobileNavigator.share === 'function'
+          && typeof mobileNavigator.canShare === 'function'
+          && mobileNavigator.canShare({ files: [file] })
+        ) {
+          try {
+            await mobileNavigator.share({
+              files: [file],
+              title: 'Carnets generados',
+              text: 'Guarda el archivo generado en Archivos.',
+            });
+            return;
+          } catch (shareError: any) {
+            if (shareError?.name !== 'AbortError') {
+              console.error('No fue posible compartir el archivo en iOS:', shareError);
+            }
+          }
+        }
+
+        triggerAnchorDownload(url, fileName, true);
+        return;
+      }
+
+      triggerAnchorDownload(url, fileName, false);
+    } finally {
+      window.setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 60_000);
+    }
+  };
+
   const normalizeIdentifier = (value: unknown) => {
     return String(value ?? '')
       .trim()
@@ -174,23 +232,7 @@ export default function GenerateOptions({
         response.headers.get('content-disposition'),
         defaultFileName
       );
-      const url = window.URL.createObjectURL(blob);
-
-      if (isIOSLikeDevice()) {
-        window.location.assign(url);
-      } else {
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = downloadFileName;
-        a.rel = 'noopener';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
-
-      window.setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-      }, 60_000);
+      await downloadGeneratedFile(blob, downloadFileName);
 
       const report = buildReport(downloadFileName);
       sessionStorage.setItem('generationReport', JSON.stringify(report));
