@@ -5,14 +5,14 @@ import Image from 'next/image';
 export const metadata: Metadata = {
   title: 'Generador de Carnets para Instituciones',
   description:
-    'Landing oficial de JC Engine para crear carnets profesionales desde Excel. Automatiza generaciÃ³n, personalizaciÃ³n y descarga en PDF en minutos.',
+    'Landing oficial de JC Engine para crear carnets profesionales desde Excel. Automatiza generación, personalización y descarga en PDF en minutos.',
   alternates: {
     canonical: '/',
   },
   openGraph: {
     title: 'JC Engine | Generador de Carnets para Instituciones',
     description:
-      'Crea carnets profesionales desde Excel, con personalizaciÃ³n de plantilla y exportaciÃ³n en PDF.',
+      'Crea carnets profesionales desde Excel, con personalización de plantilla y exportación en PDF.',
     url: '/',
     images: [
       {
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   twitter: {
     title: 'JC Engine | Generador de Carnets para Instituciones',
     description:
-      'Automatiza la creaciÃ³n de carnets con JC Engine: carga Excel, personaliza plantilla y descarga PDF.',
+      'Automatiza la creación de carnets con JC Engine: carga Excel, personaliza plantilla y descarga PDF.',
     images: ['/opengraph-image'],
   },
 };
@@ -69,9 +69,9 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-2">ImportaciÃ³n Excel</h3>
+              <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-2">Importación Excel</h3>
               <p className="text-gray-600 text-xs sm:text-sm">
-                Carga un archivo Excel con los datos de tus estudiantes. Solo necesitas columnas de nombres, curso e identificaciÃ³n.
+                Carga un archivo Excel con los datos de tus estudiantes. Solo necesitas columnas de nombres, curso e identificación.
               </p>
             </div>
 
@@ -81,9 +81,9 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                 </svg>
               </div>
-              <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-2">PersonalizaciÃ³n Total</h3>
+              <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-2">Personalización Total</h3>
               <p className="text-gray-600 text-xs sm:text-sm">
-                Usa nuestra plantilla por defecto o crea la tuya propia. Personaliza logos, nombre del colegio y mÃ¡s.
+                Usa nuestra plantilla por defecto o crea la tuya propia. Personaliza logos, nombre del colegio y más.
               </p>
             </div>
 
@@ -111,7 +111,7 @@ export default function Home() {
               </svg>
             </Link>
             <p className="text-xs sm:text-sm text-gray-500 mt-3 sm:mt-4">
-              Gratis â€¢ Sin registro â€¢ Procesamiento instantÃ¡neo
+              Gratis • Sin registro • Procesamiento instantáneo
             </p>
           </div>
         </div>

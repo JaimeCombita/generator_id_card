@@ -151,7 +151,7 @@ export default function UploadPage() {
     const startCamera = async () => {
       try {
         if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error('Este navegador no soporta acceso a cÃ¡mara.');
+          throw new Error('Este navegador no soporta acceso a cámara.');
         }
 
         stopCameraStream();
@@ -182,7 +182,7 @@ export default function UploadPage() {
           await videoRef.current.play();
         }
       } catch (error: unknown) {
-        setCameraError(error instanceof Error ? error.message : 'No fue posible iniciar la cÃ¡mara.');
+        setCameraError(error instanceof Error ? error.message : 'No fue posible iniciar la cámara.');
       }
     };
 
@@ -219,7 +219,7 @@ export default function UploadPage() {
     }
 
     if (!file.name.toLowerCase().endsWith('.zip')) {
-      setPhotosZipError('El archivo debe ser un ZIP vÃ¡lido (.zip).');
+      setPhotosZipError('El archivo debe ser un ZIP válido (.zip).');
       setPhotosZipFile(null);
       setPhotosZipById(new Set());
       return;
@@ -250,7 +250,7 @@ export default function UploadPage() {
         scope: 'upload.photos-zip',
         error,
       });
-      setPhotosZipError('No fue posible leer el ZIP. Verifica que no estÃ© daÃ±ado.');
+      setPhotosZipError('No fue posible leer el ZIP. Verifica que no esté dañado.');
       setPhotosZipFile(null);
       setPhotosZipById(new Set());
     }
@@ -259,7 +259,7 @@ export default function UploadPage() {
   const openCameraForRow = (row: any) => {
     const id = normalizeIdentifier(row.identificacion);
     if (!id) {
-      setCameraError('La identificaciÃ³n no es vÃ¡lida para asociar una foto.');
+      setCameraError('La identificación no es válida para asociar una foto.');
       return;
     }
 
@@ -317,7 +317,7 @@ export default function UploadPage() {
     }
 
     if (!file.type.startsWith('image/')) {
-      setCameraError('Selecciona un archivo de imagen vÃ¡lido.');
+      setCameraError('Selecciona un archivo de imagen válido.');
       e.target.value = '';
       return;
     }
@@ -452,8 +452,8 @@ export default function UploadPage() {
           </div>
 
           <p className="text-xs sm:text-sm text-gray-600 mb-4">
-            Sube un ZIP con fotos nombradas por identificaciÃ³n (ejemplo: <span className="font-semibold">1005234567.jpg</span>).
-            Si no subes ZIP, se usarÃ¡ placeholder automÃ¡ticamente.
+            Sube un ZIP con fotos nombradas por identificación (ejemplo: <span className="font-semibold">1005234567.jpg</span>).
+            Si no subes ZIP, se usará placeholder automáticamente.
           </p>
 
           <input
@@ -478,13 +478,13 @@ export default function UploadPage() {
 
           {photosZipFile && !photosZipError && (
             <div className="mt-3 p-3 bg-green-50 border-l-4 border-green-500 rounded-lg text-xs sm:text-sm text-green-700">
-              ZIP cargado: <span className="font-semibold">{photosZipFile.name}</span> â€¢ IDs detectados: <span className="font-semibold">{photosZipById.size}</span>
+              ZIP cargado: <span className="font-semibold">{photosZipFile.name}</span> • IDs detectados: <span className="font-semibold">{photosZipById.size}</span>
             </div>
           )}
 
           {Object.keys(capturedPhotosById).length > 0 && (
             <div className="mt-2 p-3 bg-blue-50 border-l-4 border-blue-500 rounded-lg text-xs sm:text-sm text-blue-700">
-              Fotos capturadas desde cÃ¡mara: <span className="font-semibold">{Object.keys(capturedPhotosById).length}</span>
+              Fotos capturadas desde cámara: <span className="font-semibold">{Object.keys(capturedPhotosById).length}</span>
             </div>
           )}
         </div>
@@ -502,7 +502,7 @@ export default function UploadPage() {
                   Vista previa y registros sin foto
                 </h2>
                 <p className="text-xs sm:text-sm font-semibold text-gray-600">
-                  {excelData.length} {isBusiness ? 'colaboradores' : 'estudiantes'} â€¢ Sin foto: {rowsWithoutPhoto.length}
+                  {excelData.length} {isBusiness ? 'colaboradores' : 'estudiantes'} • Sin foto: {rowsWithoutPhoto.length}
                 </p>
               </div>
             </div>
@@ -540,13 +540,13 @@ export default function UploadPage() {
                       {isBusiness ? 'Cargo' : 'Curso'}
                     </th>
                     <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      IdentificaciÃ³n
+                      Identificación
                     </th>
                     <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                       Foto
                     </th>
                     <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      AcciÃ³n
+                      Acción
                     </th>
                   </tr>
                 </thead>
@@ -560,12 +560,12 @@ export default function UploadPage() {
                         {(() => {
                           const id = normalizeIdentifier(row.identificacion);
                           if (capturedPhotosById[id]) {
-                            return 'ðŸ“· Capturada';
+                            return '📷 Capturada';
                           }
                           if (photosZipById.has(id)) {
-                            return 'âœ… ZIP';
+                            return '✅ ZIP';
                           }
-                          return photosZipFile ? 'âŒ No encontrada' : 'Sin foto (placeholder)';
+                          return photosZipFile ? '❌ No encontrada' : 'Sin foto (placeholder)';
                         })()}
                       </td>
                       <td className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500">
@@ -591,7 +591,7 @@ export default function UploadPage() {
               {filteredRows.length > rowsPerPage && (
                 <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-3 sm:px-4 py-2 sm:py-3 border-t border-gray-200 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
                   <p className="text-xs sm:text-sm font-medium text-gray-700 text-center sm:text-left">
-                    PÃ¡gina <span className="font-bold text-indigo-600">{currentPage}</span> de <span className="font-bold text-indigo-600">{totalPages}</span>
+                    Página <span className="font-bold text-indigo-600">{currentPage}</span> de <span className="font-bold text-indigo-600">{totalPages}</span>
                   </p>
                   <div className="flex items-center justify-center gap-1">
                     <button
@@ -705,12 +705,12 @@ export default function UploadPage() {
                     type="button"
                     onClick={() => setCameraFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'))}
                     className="absolute bottom-3 right-3 w-12 h-12 rounded-full bg-black/85 text-white flex items-center justify-center shadow-xl"
-                    aria-label="Cambiar cÃ¡mara"
-                    title="Cambiar cÃ¡mara"
+                    aria-label="Cambiar cámara"
+                    title="Cambiar cámara"
                   >
                     <Image
                       src="/ui/icons/camera-switch.svg"
-                      alt="Cambiar cÃ¡mara"
+                      alt="Cambiar cámara"
                       width={34}
                       height={34}
                       className="w-[34px] h-[34px]"

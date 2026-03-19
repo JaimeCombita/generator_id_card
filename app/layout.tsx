@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     default: "JC Engine | Generador de Carnets",
     template: "%s | JC Engine",
   },
-  description: "Genera carnets profesionales desde Excel en minutos con la soluciÃ³n de JC Engine.",
+  description: "Genera carnets profesionales desde Excel en minutos con la solución de JC Engine.",
   keywords: [
     "JC Engine",
     "generador de carnets",
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     url: siteUrl,
     siteName: "JC Engine",
     title: "JC Engine | Generador de Carnets",
-    description: "Automatiza la generaciÃ³n de carnets en PDF desde archivos Excel.",
+    description: "Automatiza la generación de carnets en PDF desde archivos Excel.",
     images: [
       {
         url: "/opengraph-image",
@@ -67,7 +67,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "JC Engine | Generador de Carnets",
-    description: "Automatiza la generaciÃ³n de carnets en PDF desde archivos Excel.",
+    description: "Automatiza la generación de carnets en PDF desde archivos Excel.",
     images: ["/opengraph-image"],
   },
   robots: {

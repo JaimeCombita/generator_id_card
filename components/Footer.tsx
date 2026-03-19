@@ -33,11 +33,11 @@ export default function Footer() {
           </div>
           
           <p className="text-xs sm:text-sm text-gray-600 mb-2">
-            Herramienta profesional para la generaciÃ³n de carnets estudiantiles
+            Herramienta profesional para la generación de carnets estudiantiles
           </p>
           
           <p className="text-xs text-gray-500">
-            Â© {currentYear} Todos los derechos reservados
+            © {currentYear} Todos los derechos reservados
           </p>
         </div>
       </div>
