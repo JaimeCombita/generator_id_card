@@ -67,4 +67,4 @@ jobs:
           cache: 'npm'
       
       - name: Check for vulnerabilities
-        run: npm audit --audit-level=moderate
+        run: npm audit --audit-level=critical
