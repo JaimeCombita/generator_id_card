@@ -36,6 +36,9 @@ export default function GenerateOptions({
   const router = useRouter();
   const [mode, setMode] = useState<'single' | 'multiple'>('single');
   const [error, setError] = useState<string>('');
+  const [adminCode, setAdminCode] = useState('');
+  const [showAdminInput, setShowAdminInput] = useState(false);
+  const [adminCodeError, setAdminCodeError] = useState('');
 
   const normalizeIdentifier = (value: unknown) => {
     return String(value ?? '')
@@ -99,12 +102,25 @@ export default function GenerateOptions({
   const handleGenerate = async () => {
     setIsGenerating(true);
     setError('');
+    setAdminCodeError('');
+
+    // Limitar a 5 carnets si no hay código de asesor
+    const isAdmin = adminCode && adminCode.length > 0;
+    const totalCarnets = excelData.length;
+    if (totalCarnets > 5 && !isAdmin && !showAdminInput) {
+      setShowAdminInput(true);
+      setIsGenerating(false);
+      return;
+    }
 
     try {
       const formData = new FormData();
       formData.append('excelFile', excelFile);
       formData.append('mode', mode);
       formData.append('useDefaultTemplate', useDefaultTemplate.toString());
+      if (adminCode) {
+        formData.append('adminCode', adminCode);
+      }
 
       if (photosZipFile) {
         formData.append('photosZip', photosZipFile);
@@ -131,6 +147,13 @@ export default function GenerateOptions({
         formData.append('templateFile', templateFile);
       }
 
+      // Si no es admin y hay más de 5 carnets, limitar a 5
+      let filteredExcelData = excelData;
+      if (totalCarnets > 5 && !isAdmin) {
+        filteredExcelData = excelData.slice(0, 5);
+        formData.append('filteredExcelData', JSON.stringify(filteredExcelData));
+      }
+
       const response = await fetch('/api/generate', {
         method: 'POST',
         body: formData,
@@ -138,6 +161,12 @@ export default function GenerateOptions({
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (errorData.adminCodeError) {
+          setAdminCodeError(errorData.adminCodeError);
+          setShowAdminInput(true);
+          setIsGenerating(false);
+          return;
+        }
         throw new Error(errorData.error || 'Error al generar PDFs');
       }
 
@@ -256,23 +285,49 @@ export default function GenerateOptions({
         </div>
       )}
 
-      <button
-        onClick={handleGenerate}
-        disabled={isGenerating}
-        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white text-sm sm:text-base font-bold py-3 sm:py-4 px-4 sm:px-6 rounded-xl transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none disabled:cursor-not-allowed"
-      >
-        {isGenerating ? (
-          <>
-            <svg className="animate-spin -ml-1 mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 text-white" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span className="text-sm sm:text-base">Generando carnets...</span>
-          </>
-        ) : (
-          'Generar Carnets'
-        )}
-      </button>
+      {showAdminInput && (
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Código de asesor</label>
+          <input
+            type="password"
+            value={adminCode}
+            onChange={e => setAdminCode(e.target.value)}
+            className="w-full border border-indigo-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="Ingrese el código de asesor"
+            autoFocus
+          />
+          {adminCodeError && <p className="text-red-600 text-xs mt-1">{adminCodeError}</p>}
+          <button
+            onClick={() => {
+              setShowAdminInput(false);
+              handleGenerate();
+            }}
+            className="mt-2 w-full bg-indigo-600 text-white font-bold py-2 rounded-lg hover:bg-indigo-700 transition-all"
+            disabled={isGenerating || !adminCode}
+          >
+            Validar código y generar
+          </button>
+        </div>
+      )}
+      {!showAdminInput && (
+        <button
+          onClick={handleGenerate}
+          disabled={isGenerating}
+          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white text-sm sm:text-base font-bold py-3 sm:py-4 px-4 sm:px-6 rounded-xl transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none disabled:cursor-not-allowed"
+        >
+          {isGenerating ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 text-white" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span className="text-sm sm:text-base">Generando carnets...</span>
+            </>
+          ) : (
+            'Generar Carnets'
+          )}
+        </button>
+      )}
 
       {isGenerating && (
         <LoadingSpinner 

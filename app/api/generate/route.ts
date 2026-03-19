@@ -129,8 +129,16 @@ export async function POST(request: NextRequest) {
       templateHtml = decoder.decode(templateBuffer);
     }
 
+    // Definir addWatermark correctamente
+    let addWatermark = false;
+    if (typeof adminCode !== 'undefined') {
+      addWatermark = !(adminCode && adminCode === ENV_ADMIN_CODE);
+    } else {
+      addWatermark = data.length > 5 ? true : false;
+    }
+
     if (mode === 'single') {
-      const pdf = await generateSinglePDF(data, templateHtml, cardsPerPage, origin, photosMap);
+      const pdf = await generateSinglePDF(data, templateHtml, cardsPerPage, origin, photosMap, addWatermark);
       return new NextResponse(new Uint8Array(pdf), {
         headers: {
           'Content-Type': 'application/pdf',
@@ -138,7 +146,7 @@ export async function POST(request: NextRequest) {
         },
       });
     } else {
-      const pdfBuffers = await generateMultiplePDFs(data, templateHtml, origin, photosMap);
+      const pdfBuffers = await generateMultiplePDFs(data, templateHtml, origin, photosMap, addWatermark);
 
       const zip = new JSZip();
       pdfBuffers.forEach((buf, idx) => {
@@ -320,7 +328,8 @@ async function generateSinglePDF(
   templateHtml: string,
   cardsPerPage: number,
   baseHref: string,
-  photosMap: Map<string, string>
+  photosMap: Map<string, string>,
+  addWatermark: boolean = false
 ): Promise<Buffer> {
   const browser = await launchBrowser();
 
@@ -341,16 +350,19 @@ async function generateSinglePDF(
       let gridItemsHtml = '';
       for (const student of chunk) {
         const courseOrRole = student.curso || student.cargo || '';
-        const cardHtml = carnetInner
+        let cardHtml = carnetInner
           .replace(/\{\{NOMBRES\}\}/g, student.nombres || '')
           .replace(/\{\{CURSO\}\}/g, courseOrRole)
           .replace(/\{\{IDENTIFICACION\}\}/g, student.identificacion || '')
           .replace(/\{\{FOTO_HTML\}\}/g, resolvePhotoHtml(student, photosMap));
+        if (addWatermark) {
+          cardHtml += `<div style="position:absolute;top:40%;left:10%;width:80%;height:40px;background:rgba(0,0,0,0.15);color:#fff;font-size:24px;text-align:center;z-index:999;font-weight:bold;transform:rotate(-10deg);pointer-events:none;">VERSIÓN DE PRUEBA</div>`;
+        }
         gridItemsHtml += `\n${cardHtml}\n`;
       }
 
       const pageHtml = `
-        <div class="page">
+        <div class="page" style="position:relative;">
           <div class="grid">${gridItemsHtml}</div>
         </div>
       `;
@@ -405,7 +417,8 @@ async function generateMultiplePDFs(
   data: any[],
   templateHtml: string,
   baseHref: string,
-  photosMap: Map<string, string>
+  photosMap: Map<string, string>,
+  addWatermark: boolean = false
 ): Promise<Buffer[]> {
   const pdfs: Buffer[] = [];
   const browser = await launchBrowser();
@@ -419,11 +432,14 @@ async function generateMultiplePDFs(
       await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
 
       const courseOrRole = student.curso || student.cargo || '';
-      const filledCard = carnetInner
+      let filledCard = carnetInner
         .replace(/\{\{NOMBRES\}\}/g, student.nombres || '')
         .replace(/\{\{CURSO\}\}/g, courseOrRole)
         .replace(/\{\{IDENTIFICACION\}\}/g, student.identificacion || '')
         .replace(/\{\{FOTO_HTML\}\}/g, resolvePhotoHtml(student, photosMap));
+      if (addWatermark) {
+        filledCard += `<div style="position:absolute;top:40%;left:10%;width:80%;height:40px;background:rgba(0,0,0,0.15);color:#fff;font-size:24px;text-align:center;z-index:999;font-weight:bold;transform:rotate(-10deg);pointer-events:none;">VERSIÓN DE PRUEBA</div>`;
+      }
 
       const a4Html = `
         <!DOCTYPE html>
