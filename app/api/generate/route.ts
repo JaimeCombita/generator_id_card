@@ -17,6 +17,8 @@ export async function POST(request: NextRequest) {
     const capturedPhotosData = formData.get('capturedPhotosData') as string | null;
     const mode = formData.get('mode') as string;
     const useDefaultTemplate = formData.get('useDefaultTemplate') === 'true';
+    const adminCode = ((formData.get('adminCode') as string | null) || '').trim();
+    const envAdminCode = (process.env.ADMIN_CODE || '').trim();
     const cardsPerPageParam = formData.get('cardsPerPage');
     const cardsPerPage = cardsPerPageParam ? Number(cardsPerPageParam) : 8;
 
@@ -29,10 +31,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (adminCode && (!envAdminCode || adminCode !== envAdminCode)) {
+      return NextResponse.json(
+        { adminCodeError: 'Codigo de asesor incorrecto.' },
+        { status: 401 }
+      );
+    }
+
+    const isAdmin = Boolean(adminCode && envAdminCode && adminCode === envAdminCode);
+
     const excelBuffer = await excelFile.arrayBuffer();
     const workbook = XLSX.read(excelBuffer);
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const data: any[] = XLSX.utils.sheet_to_json(worksheet);
+    let data: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+    if (!isAdmin && data.length > 5) {
+      data = data.slice(0, 5);
+    }
     const zipPhotosMap = await buildPhotosMapByIdentification(photosZip);
     const capturedPhotosMap = buildCapturedPhotosMapByIdentification(capturedPhotosData);
     const photosMap = mergePhotosMaps(zipPhotosMap, capturedPhotosMap);
@@ -129,13 +144,7 @@ export async function POST(request: NextRequest) {
       templateHtml = decoder.decode(templateBuffer);
     }
 
-    // Definir addWatermark correctamente
-    let addWatermark = false;
-    if (typeof adminCode !== 'undefined') {
-      addWatermark = !(adminCode && adminCode === ENV_ADMIN_CODE);
-    } else {
-      addWatermark = data.length > 5 ? true : false;
-    }
+    const addWatermark = !isAdmin;
 
     if (mode === 'single') {
       const pdf = await generateSinglePDF(data, templateHtml, cardsPerPage, origin, photosMap, addWatermark);
@@ -288,11 +297,6 @@ function buildCapturedPhotosMapByIdentification(rawData: string | null): Map<str
       if (!normalizedId) {
         return;
       }
-
-      if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
-        return;
-      }
-
       photosMap.set(normalizedId, dataUrl);
     });
   } catch (error) {
@@ -356,7 +360,7 @@ async function generateSinglePDF(
           .replace(/\{\{IDENTIFICACION\}\}/g, student.identificacion || '')
           .replace(/\{\{FOTO_HTML\}\}/g, resolvePhotoHtml(student, photosMap));
         if (addWatermark) {
-          cardHtml += `<div style="position:absolute;top:40%;left:10%;width:80%;height:40px;background:rgba(0,0,0,0.15);color:#fff;font-size:24px;text-align:center;z-index:999;font-weight:bold;transform:rotate(-10deg);pointer-events:none;">VERSIÓN DE PRUEBA</div>`;
+          cardHtml = `<div style="position:relative;width:100%;height:100%;">${cardHtml}<div style="position:absolute;top:40%;left:10%;width:80%;height:40px;background:rgba(0,0,0,0.15);color:#fff;font-size:24px;text-align:center;z-index:999;font-weight:bold;transform:rotate(-10deg);pointer-events:none;">VERSIÓN DE PRUEBA</div></div>`;
         }
         gridItemsHtml += `\n${cardHtml}\n`;
       }
