@@ -9,8 +9,167 @@ import * as path from 'path';
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
+const MAX_EXCEL_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_TEMPLATE_SIZE_BYTES = 2 * 1024 * 1024;
+const MAX_ZIP_SIZE_BYTES = 20 * 1024 * 1024;
+const MAX_CAPTURED_PHOTOS_SIZE_BYTES = 8 * 1024 * 1024;
+const MAX_ROWS_ABSOLUTE = 1000;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 12;
+
+const requestHits = new Map<string, number[]>();
+
+function getRedisConfig() {
+  const redisUrl = (process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL || '').trim();
+  const redisToken = (process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN || '').trim();
+  if (!redisUrl || !redisToken) {
+    return null;
+  }
+
+  return { redisUrl, redisToken };
+}
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function sanitizeTemplateHtml(input: string): string {
+  let sanitized = input;
+
+  // Remove active content tags that can execute JS or load remote content.
+  sanitized = sanitized.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
+  sanitized = sanitized.replace(/<iframe[\s\S]*?>[\s\S]*?<\/iframe>/gi, '');
+  sanitized = sanitized.replace(/<object[\s\S]*?>[\s\S]*?<\/object>/gi, '');
+  sanitized = sanitized.replace(/<embed[\s\S]*?>[\s\S]*?<\/embed>/gi, '');
+  sanitized = sanitized.replace(/<link[^>]*>/gi, '');
+  sanitized = sanitized.replace(/<meta[^>]*http-equiv[^>]*>/gi, '');
+
+  // Remove inline event handlers.
+  sanitized = sanitized.replace(/\son\w+\s*=\s*"[^"]*"/gi, '');
+  sanitized = sanitized.replace(/\son\w+\s*=\s*'[^']*'/gi, '');
+  sanitized = sanitized.replace(/\son\w+\s*=\s*[^\s>]+/gi, '');
+
+  // Neutralize javascript: URLs.
+  sanitized = sanitized.replace(/(href|src)\s*=\s*"\s*javascript:[^"]*"/gi, '$1="#"');
+  sanitized = sanitized.replace(/(href|src)\s*=\s*'\s*javascript:[^']*'/gi, "$1='#'");
+  sanitized = sanitized.replace(/\ssrcdoc\s*=\s*"[^"]*"/gi, '');
+  sanitized = sanitized.replace(/\ssrcdoc\s*=\s*'[^']*'/gi, '');
+
+  return sanitized;
+}
+
+function getClientIp(request: NextRequest): string {
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  if (forwardedFor) {
+    return forwardedFor.split(',')[0].trim();
+  }
+
+  const realIp = request.headers.get('x-real-ip');
+  if (realIp) {
+    return realIp.trim();
+  }
+
+  return 'unknown';
+}
+
+function isRateLimitedInMemory(clientIp: string): boolean {
+  const now = Date.now();
+  const cutoff = now - RATE_LIMIT_WINDOW_MS;
+  const hits = requestHits.get(clientIp) || [];
+  const freshHits = hits.filter((t) => t > cutoff);
+
+  if (freshHits.length >= RATE_LIMIT_MAX_REQUESTS) {
+    requestHits.set(clientIp, freshHits);
+    return true;
+  }
+
+  freshHits.push(now);
+  requestHits.set(clientIp, freshHits);
+  return false;
+}
+
+async function isRateLimited(clientIp: string): Promise<boolean> {
+  const redisConfig = getRedisConfig();
+  if (!redisConfig) {
+    return isRateLimitedInMemory(clientIp);
+  }
+
+  const { redisUrl, redisToken } = redisConfig;
+  const key = `rate:generate:${clientIp}`;
+  const encodedKey = encodeURIComponent(key);
+
+  try {
+    const incrementResponse = await fetch(`${redisUrl}/incr/${encodedKey}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${redisToken}`,
+      },
+      cache: 'no-store',
+    });
+
+    if (!incrementResponse.ok) {
+      return isRateLimitedInMemory(clientIp);
+    }
+
+    const incrementResult = await incrementResponse.json();
+    const count = Number(incrementResult?.result || 0);
+
+    await fetch(`${redisUrl}/pexpire/${encodedKey}/${RATE_LIMIT_WINDOW_MS}/NX`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${redisToken}`,
+      },
+      cache: 'no-store',
+    });
+
+    return count > RATE_LIMIT_MAX_REQUESTS;
+  } catch {
+    return isRateLimitedInMemory(clientIp);
+  }
+}
+
+function isOriginAllowed(request: NextRequest): boolean {
+  const origin = request.headers.get('origin');
+  if (!origin) {
+    return true;
+  }
+
+  const currentOrigin = request.nextUrl.origin;
+  const allowListRaw = process.env.ALLOWED_ORIGINS || '';
+  const allowList = allowListRaw
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  if (allowList.length === 0) {
+    return origin === currentOrigin;
+  }
+
+  return allowList.includes(origin);
+}
+
 export async function POST(request: NextRequest) {
   try {
+    const clientIp = getClientIp(request);
+    if (await isRateLimited(clientIp)) {
+      return NextResponse.json(
+        { error: 'Demasiadas solicitudes. Intenta de nuevo en un minuto.' },
+        { status: 429 }
+      );
+    }
+
+    if (!isOriginAllowed(request)) {
+      return NextResponse.json(
+        { error: 'Origen de solicitud no permitido.' },
+        { status: 403 }
+      );
+    }
+
     const formData = await request.formData();
     const excelFile = formData.get('excelFile') as File;
     const photosZip = formData.get('photosZip') as File | null;
@@ -31,6 +190,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!['single', 'multiple'].includes(mode)) {
+      return NextResponse.json(
+        { error: 'Modo de generacion invalido.' },
+        { status: 400 }
+      );
+    }
+
+    if (!Number.isFinite(cardsPerPage) || cardsPerPage < 1 || cardsPerPage > 8) {
+      return NextResponse.json(
+        { error: 'Cantidad de carnets por pagina invalida.' },
+        { status: 400 }
+      );
+    }
+
+    if (excelFile.size === 0 || excelFile.size > MAX_EXCEL_SIZE_BYTES) {
+      return NextResponse.json(
+        { error: 'Archivo Excel invalido o demasiado grande.' },
+        { status: 400 }
+      );
+    }
+
+    const allowedExcelTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+    ];
+    if (excelFile.type && !allowedExcelTypes.includes(excelFile.type)) {
+      return NextResponse.json(
+        { error: 'Tipo de archivo Excel no permitido.' },
+        { status: 400 }
+      );
+    }
+
+    if (photosZip && photosZip.size > MAX_ZIP_SIZE_BYTES) {
+      return NextResponse.json(
+        { error: 'El archivo ZIP de fotos supera el tamano permitido.' },
+        { status: 400 }
+      );
+    }
+
+    if (capturedPhotosData) {
+      const capturedSize = Buffer.byteLength(capturedPhotosData, 'utf8');
+      if (capturedSize > MAX_CAPTURED_PHOTOS_SIZE_BYTES) {
+        return NextResponse.json(
+          { error: 'Las fotos capturadas superan el tamano permitido.' },
+          { status: 400 }
+        );
+      }
+    }
+
     if (adminCode && (!envAdminCode || adminCode !== envAdminCode)) {
       return NextResponse.json(
         { adminCodeError: 'Codigo de asesor incorrecto.' },
@@ -45,6 +253,20 @@ export async function POST(request: NextRequest) {
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
     let data: any[] = XLSX.utils.sheet_to_json(worksheet);
 
+    if (data.length === 0) {
+      return NextResponse.json(
+        { error: 'El Excel no contiene registros validos.' },
+        { status: 400 }
+      );
+    }
+
+    if (data.length > MAX_ROWS_ABSOLUTE) {
+      return NextResponse.json(
+        { error: `Se excede el maximo permitido de ${MAX_ROWS_ABSOLUTE} registros.` },
+        { status: 400 }
+      );
+    }
+
     if (!isAdmin && data.length > 5) {
       data = data.slice(0, 5);
     }
@@ -56,7 +278,7 @@ export async function POST(request: NextRequest) {
 
     if (useDefaultTemplate) {
       const credentialLevel = (formData.get('credentialLevel') as string) === 'business' ? 'business' : 'student';
-      const schoolName = formData.get('schoolName') as string || 'Colegio Estrella del Sur';
+      const schoolName = (formData.get('schoolName') as string || 'Colegio Estrella del Sur').trim();
       const includeSEDLogo = formData.get('includeSEDLogo') === 'true';
       const alternativeCityHallLogo = formData.get('alternativeCityHallLogo') as File | null;
       const schoolLogo = formData.get('schoolLogo') as File | null;
@@ -64,7 +286,7 @@ export async function POST(request: NextRequest) {
       const templatePath = path.join(process.cwd(), 'public', 'templates', 'carnet-horizontal.html');
       templateHtml = fs.readFileSync(templatePath, 'utf-8');
 
-      templateHtml = templateHtml.replace(/Colegio Estrella del Sur/g, schoolName);
+      templateHtml = templateHtml.replace(/Colegio Estrella del Sur/g, escapeHtml(schoolName));
       if (credentialLevel === 'business') {
         templateHtml = templateHtml
           .replace(/Carnet Estudiantil/g, 'Carnet Empresarial')
@@ -139,9 +361,24 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      if (templateFile.size === 0 || templateFile.size > MAX_TEMPLATE_SIZE_BYTES) {
+        return NextResponse.json(
+          { error: 'Plantilla invalida o demasiado grande.' },
+          { status: 400 }
+        );
+      }
+
+      const templateName = templateFile.name.toLowerCase();
+      if (!templateName.endsWith('.html') && !templateName.endsWith('.htm')) {
+        return NextResponse.json(
+          { error: 'La plantilla debe ser un archivo HTML.' },
+          { status: 400 }
+        );
+      }
+
       const templateBuffer = await templateFile.arrayBuffer();
       const decoder = new TextDecoder();
-      templateHtml = decoder.decode(templateBuffer);
+      templateHtml = sanitizeTemplateHtml(decoder.decode(templateBuffer));
     }
 
     const addWatermark = !isAdmin;
@@ -353,11 +590,11 @@ async function generateSinglePDF(
       const chunk = data.slice(i, i + perPage);
       let gridItemsHtml = '';
       for (const student of chunk) {
-        const courseOrRole = student.curso || student.cargo || '';
+        const courseOrRole = escapeHtml(student.curso || student.cargo || '');
         let cardHtml = carnetInner
-          .replace(/\{\{NOMBRES\}\}/g, student.nombres || '')
+          .replace(/\{\{NOMBRES\}\}/g, escapeHtml(student.nombres || ''))
           .replace(/\{\{CURSO\}\}/g, courseOrRole)
-          .replace(/\{\{IDENTIFICACION\}\}/g, student.identificacion || '')
+          .replace(/\{\{IDENTIFICACION\}\}/g, escapeHtml(student.identificacion || ''))
           .replace(/\{\{FOTO_HTML\}\}/g, resolvePhotoHtml(student, photosMap));
         if (addWatermark) {
           cardHtml = `<div style="position:relative;width:100%;height:100%;">${cardHtml}<div style="position:absolute;top:40%;left:10%;width:80%;height:40px;background:rgba(0,0,0,0.15);color:#fff;font-size:24px;text-align:center;z-index:999;font-weight:bold;transform:rotate(-10deg);pointer-events:none;">VERSIÓN DE PRUEBA</div></div>`;
@@ -435,11 +672,11 @@ async function generateMultiplePDFs(
       const page = await browser.newPage();
       await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
 
-      const courseOrRole = student.curso || student.cargo || '';
+      const courseOrRole = escapeHtml(student.curso || student.cargo || '');
       let filledCard = carnetInner
-        .replace(/\{\{NOMBRES\}\}/g, student.nombres || '')
+        .replace(/\{\{NOMBRES\}\}/g, escapeHtml(student.nombres || ''))
         .replace(/\{\{CURSO\}\}/g, courseOrRole)
-        .replace(/\{\{IDENTIFICACION\}\}/g, student.identificacion || '')
+        .replace(/\{\{IDENTIFICACION\}\}/g, escapeHtml(student.identificacion || ''))
         .replace(/\{\{FOTO_HTML\}\}/g, resolvePhotoHtml(student, photosMap));
       if (addWatermark) {
         filledCard += `<div style="position:absolute;top:40%;left:10%;width:80%;height:40px;background:rgba(0,0,0,0.15);color:#fff;font-size:24px;text-align:center;z-index:999;font-weight:bold;transform:rotate(-10deg);pointer-events:none;">VERSIÓN DE PRUEBA</div>`;
