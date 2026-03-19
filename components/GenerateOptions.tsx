@@ -40,6 +40,91 @@ export default function GenerateOptions({
   const [showAdminInput, setShowAdminInput] = useState(false);
   const [adminCodeError, setAdminCodeError] = useState('');
 
+  const getFileNameFromDisposition = (disposition: string | null, fallback: string) => {
+    if (!disposition) {
+      return fallback;
+    }
+
+    const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) {
+      try {
+        return decodeURIComponent(utf8Match[1]);
+      } catch {
+        return utf8Match[1];
+      }
+    }
+
+    const normalMatch = disposition.match(/filename="?([^";]+)"?/i);
+    return normalMatch?.[1] || fallback;
+  };
+
+  const isIOSLikeDevice = () => {
+    if (typeof navigator === 'undefined') {
+      return false;
+    }
+
+    return /iPad|iPhone|iPod/.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  };
+
+  const triggerAnchorDownload = (url: string, fileName: string, openInNewTab = false) => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.rel = 'noopener noreferrer';
+
+    if (openInNewTab) {
+      a.target = '_blank';
+    } else {
+      a.download = fileName;
+    }
+
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const downloadGeneratedFile = async (blob: Blob, fileName: string) => {
+    const fileType = blob.type || (fileName.toLowerCase().endsWith('.zip') ? 'application/zip' : 'application/pdf');
+    const url = window.URL.createObjectURL(blob);
+
+    try {
+      if (isIOSLikeDevice()) {
+        const file = new File([blob], fileName, { type: fileType });
+        const mobileNavigator = navigator as Navigator & {
+          canShare?: (data?: ShareData) => boolean;
+        };
+
+        if (
+          typeof mobileNavigator.share === 'function'
+          && typeof mobileNavigator.canShare === 'function'
+          && mobileNavigator.canShare({ files: [file] })
+        ) {
+          try {
+            await mobileNavigator.share({
+              files: [file],
+              title: 'Carnets generados',
+              text: 'Guarda el archivo generado en Archivos.',
+            });
+            return;
+          } catch (shareError: any) {
+            if (shareError?.name !== 'AbortError') {
+              console.error('No fue posible compartir el archivo en iOS:', shareError);
+            }
+          }
+        }
+
+        triggerAnchorDownload(url, fileName, true);
+        return;
+      }
+
+      triggerAnchorDownload(url, fileName, false);
+    } finally {
+      window.setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 60_000);
+    }
+  };
+
   const normalizeIdentifier = (value: unknown) => {
     return String(value ?? '')
       .trim()
@@ -171,15 +256,12 @@ export default function GenerateOptions({
       }
 
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const downloadFileName = mode === 'single' ? 'carnets_todos.pdf' : 'carnets.zip';
-      a.download = downloadFileName;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const defaultFileName = mode === 'single' ? 'carnets_todos.pdf' : 'carnets_individuales.zip';
+      const downloadFileName = getFileNameFromDisposition(
+        response.headers.get('content-disposition'),
+        defaultFileName
+      );
+      await downloadGeneratedFile(blob, downloadFileName);
 
       const report = buildReport(downloadFileName);
       sessionStorage.setItem('generationReport', JSON.stringify(report));
