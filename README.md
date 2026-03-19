@@ -153,3 +153,7 @@ Si aparece error `EINVAL: invalid argument, readlink ... .next ...`, el proyecto
 - Persistencia de reportes/logs en backend
 - Autenticación y roles
 - Integración con almacenamiento en nube (S3/Cloudinary)
+- Carnets en formato vertical
+- Agregar funcionalidad para diseño online del template
+- agregar funcionalidad para carnets a dos caras
+- agregar codigo de barras y codigo QR
