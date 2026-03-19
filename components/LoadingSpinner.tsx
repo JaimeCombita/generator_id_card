@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
+import styles from './LoadingSpinner.module.css';
 
 interface LoadingSpinnerProps {
   message?: string;
@@ -10,6 +12,9 @@ interface LoadingSpinnerProps {
 
 export default function LoadingSpinner({ message = 'Procesando...', progress }: LoadingSpinnerProps) {
   const [isMounted, setIsMounted] = useState(false);
+  const progressStyle = progress !== undefined
+    ? ({ '--progress-width': `${progress}%` } as CSSProperties)
+    : undefined;
 
   useEffect(() => {
     setIsMounted(true);
@@ -51,8 +56,8 @@ export default function LoadingSpinner({ message = 'Procesando...', progress }: 
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
+                  className={`h-full bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full transition-all duration-300 ${styles.progressFill}`}
+                  style={progressStyle}
                 ></div>
               </div>
             </div>
@@ -60,8 +65,8 @@ export default function LoadingSpinner({ message = 'Procesando...', progress }: 
 
           <div className="mt-6 flex gap-2">
             <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"></div>
-            <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-            <div className="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            <div className={`w-2 h-2 bg-purple-600 rounded-full animate-bounce ${styles.dotDelay1}`}></div>
+            <div className={`w-2 h-2 bg-indigo-600 rounded-full animate-bounce ${styles.dotDelay2}`}></div>
           </div>
         </div>
       </div>

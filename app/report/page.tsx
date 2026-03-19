@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { logger } from '@/lib/infrastructure/logging/logger';
 
 type GenerationReport = {
   generatedAt: string;
@@ -31,7 +32,10 @@ export default function ReportPage() {
       const parsed = JSON.parse(raw) as GenerationReport;
       setReport(parsed);
     } catch (error) {
-      console.error(error);
+      logger.warn('Invalid generation report payload in sessionStorage', {
+        scope: 'report.session-storage',
+        error,
+      });
       setReport(null);
     }
   }, []);

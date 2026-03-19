@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import ColorCustomizer, { ColorTheme, PREDEFINED_PALETTES } from './ColorCustomizer';
+import styles from './TemplateConfiguration.module.css';
 
 export interface TemplateConfig {
   credentialLevel: 'student' | 'business';
@@ -163,7 +164,9 @@ export default function TemplateConfiguration({
             Tipo de carnet
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-            <label className="flex items-center p-3 bg-white rounded-lg border-2 cursor-pointer transition-colors" style={{ borderColor: credentialLevel === 'student' ? '#6366f1' : '#e5e7eb' }}>
+            <label
+              className={`flex items-center p-3 bg-white rounded-lg border-2 cursor-pointer transition-colors ${styles.levelCard} ${credentialLevel === 'student' ? styles.levelCardActive : ''}`}
+            >
               <input
                 type="radio"
                 name="credentialLevel"
@@ -173,7 +176,9 @@ export default function TemplateConfiguration({
               />
               <span className="text-xs sm:text-sm font-semibold text-gray-800">Estudiantil</span>
             </label>
-            <label className="flex items-center p-3 bg-white rounded-lg border-2 cursor-pointer transition-colors" style={{ borderColor: credentialLevel === 'business' ? '#6366f1' : '#e5e7eb' }}>
+            <label
+              className={`flex items-center p-3 bg-white rounded-lg border-2 cursor-pointer transition-colors ${styles.levelCard} ${credentialLevel === 'business' ? styles.levelCardActive : ''}`}
+            >
               <input
                 type="radio"
                 name="credentialLevel"
@@ -187,7 +192,6 @@ export default function TemplateConfiguration({
         </div>
         )}
 
-        {/* Nombre del colegio */}
         <div className="p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
           <label className="block text-xs sm:text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
             <svg className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -204,7 +208,6 @@ export default function TemplateConfiguration({
           />
         </div>
 
-        {/* Logo de la Secretaría de Educación */}
         {credentialLevel === 'student' && (
         <div className="border-t-2 border-gray-100 pt-4 sm:pt-6">
           <label className="flex items-center cursor-pointer mb-3 p-2 sm:p-3 bg-purple-50 rounded-xl hover:bg-purple-100 transition-colors group">
@@ -224,7 +227,6 @@ export default function TemplateConfiguration({
             </div>
           </label>
 
-          {/* Logo alternativo de alcaldía */}
           {!includeSEDLogo && (
             <div className="ml-3 sm:ml-6 mt-3 p-3 sm:p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200">
               <label className="block text-xs sm:text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
@@ -265,7 +267,6 @@ export default function TemplateConfiguration({
         </div>
         )}
 
-        {/* Logo del colegio */}
         <div className="border-t-2 border-gray-100 pt-4 sm:pt-6">
           <div className="p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100">
             <label className="block text-xs sm:text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
@@ -317,7 +318,6 @@ export default function TemplateConfiguration({
           </div>
         </div>
 
-        {/* Color Customizer */}
         <div className="border-t-2 border-gray-100 pt-4 sm:pt-6">
           <ColorCustomizer
             currentTheme={colorTheme}

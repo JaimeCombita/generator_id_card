@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { TRANSPARENT_1PX_PNG } from '@/lib/infrastructure/config/constants';
 
 function PreviewContent() {
   const [htmlContent, setHtmlContent] = useState('');
@@ -30,7 +31,7 @@ function PreviewContent() {
             .replace(/Carnet Estudiantil/g, 'Carnet Empresarial')
             .replace(/>Curso</g, '>Cargo<')
             .replace(/Colegio Estrella del Sur/g, 'Empresa Ejemplo S.A.S')
-            .replace(/\/templates\/logo_secretaria\.jpg/g, 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=');
+            .replace(/\/templates\/logo_secretaria\.jpg/g, TRANSPARENT_1PX_PNG);
         }
         
         setHtmlContent(preview);
@@ -48,7 +49,6 @@ function PreviewContent() {
             </p>
           </div>
 
-          {/* Vista previa del carnet */}
           <div className={`flex justify-center items-center bg-gray-50 rounded-lg overflow-x-auto ${isEmbedded ? 'p-3 sm:p-6' : 'p-8'}`}>
             <div 
               className="shadow-2xl"
@@ -56,7 +56,6 @@ function PreviewContent() {
             />
           </div>
 
-          {/* Información técnica */}
           <div className="mt-8 grid md:grid-cols-2 gap-4">
             <div className="bg-blue-50 p-4 rounded-lg">
               <h3 className="font-semibold text-blue-900 mb-2">📏 Dimensiones</h3>

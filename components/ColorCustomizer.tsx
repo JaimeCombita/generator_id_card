@@ -1,6 +1,8 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import { useState, useEffect } from 'react';
+import styles from './ColorCustomizer.module.css';
 
 export interface ColorTheme {
   gradientStart: string;
@@ -92,6 +94,16 @@ export default function ColorCustomizer({ onColorChange, currentTheme, credentia
   const [customColors, setCustomColors] = useState<ColorTheme>(currentTheme || PREDEFINED_PALETTES.corporate.colors);
   const [useCustom, setUseCustom] = useState(false);
 
+  const previewCardVars = {
+    '--gradient-start': customColors.gradientStart,
+    '--gradient-end': customColors.gradientEnd,
+    '--card-border': customColors.border,
+    '--header-border': customColors.headerBorder,
+    '--title-color': customColors.titleColor,
+    '--label-color': customColors.labelColor,
+    '--text-color': customColors.textColor,
+  } as CSSProperties;
+
   const handlePaletteChange = (palette: keyof typeof PREDEFINED_PALETTES) => {
     setSelectedPalette(palette);
     setUseCustom(false);
@@ -124,7 +136,6 @@ export default function ColorCustomizer({ onColorChange, currentTheme, credentia
         🎨 Elige una paleta o personaliza los colores del carnet
       </p>
 
-      {/* Paletas Predefinidas */}
       <div className="mb-6 sm:mb-8">
         <label className="block text-xs sm:text-sm font-bold text-gray-800 mb-3">
           Paletas Predefinidas
@@ -143,10 +154,11 @@ export default function ColorCustomizer({ onColorChange, currentTheme, credentia
             >
               <div className="flex items-center gap-2 mb-2">
                 <div
-                  className="w-6 h-6 rounded border border-gray-300"
+                  className={styles.paletteSwatch}
                   style={{
-                    background: `linear-gradient(135deg, ${palette.colors.gradientStart} 0%, ${palette.colors.gradientEnd} 100%)`,
-                  }}
+                    '--palette-start': palette.colors.gradientStart,
+                    '--palette-end': palette.colors.gradientEnd,
+                  } as CSSProperties}
                 />
               </div>
               <p className="text-xs font-semibold text-gray-800 text-center">{palette.name}</p>
@@ -155,14 +167,12 @@ export default function ColorCustomizer({ onColorChange, currentTheme, credentia
         </div>
       </div>
 
-      {/* Color Pickers Personalizados */}
       <div className="border-t-2 border-gray-100 pt-4 sm:pt-6">
         <label className="block text-xs sm:text-sm font-bold text-gray-800 mb-3 sm:mb-4">
           Colores Personalizados
         </label>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-          {/* Gradiente Inicio */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-2">Fondo Inicio</label>
             <div className="flex items-center gap-1.5 sm:gap-2">
@@ -176,7 +186,6 @@ export default function ColorCustomizer({ onColorChange, currentTheme, credentia
             </div>
           </div>
 
-          {/* Gradiente Fin */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-2">Fondo Fin</label>
             <div className="flex items-center gap-1.5 sm:gap-2">
@@ -190,7 +199,6 @@ export default function ColorCustomizer({ onColorChange, currentTheme, credentia
             </div>
           </div>
 
-          {/* Borde Carnet */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-2">Borde Carnet</label>
             <div className="flex items-center gap-1.5 sm:gap-2">
@@ -204,7 +212,6 @@ export default function ColorCustomizer({ onColorChange, currentTheme, credentia
             </div>
           </div>
 
-          {/* Línea Header */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-2">Línea Header</label>
             <div className="flex items-center gap-1.5 sm:gap-2">
@@ -218,7 +225,6 @@ export default function ColorCustomizer({ onColorChange, currentTheme, credentia
             </div>
           </div>
 
-          {/* Título */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-2">Título Institución</label>
             <div className="flex items-center gap-1.5 sm:gap-2">
@@ -232,7 +238,6 @@ export default function ColorCustomizer({ onColorChange, currentTheme, credentia
             </div>
           </div>
 
-          {/* Etiquetas */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-2">Etiquetas Campos</label>
             <div className="flex items-center gap-1.5 sm:gap-2">
@@ -246,7 +251,6 @@ export default function ColorCustomizer({ onColorChange, currentTheme, credentia
             </div>
           </div>
 
-          {/* Texto Valores */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-2">Texto Valores</label>
             <div className="flex items-center gap-1.5 sm:gap-2">
@@ -260,7 +264,6 @@ export default function ColorCustomizer({ onColorChange, currentTheme, credentia
             </div>
           </div>
 
-          {/* Color Acento */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-2">Color Acento</label>
             <div className="flex items-center gap-1.5 sm:gap-2">
@@ -276,221 +279,52 @@ export default function ColorCustomizer({ onColorChange, currentTheme, credentia
         </div>
       </div>
 
-      {/* Vista Previa */}
       <div className="mt-6 p-2 sm:p-4 bg-gray-50 rounded-lg border border-gray-200 flex flex-col items-center">
         <p className="text-xs font-semibold text-gray-700 mb-3 w-full">Vista Previa del Carnet {credentialLevel === 'business' ? '(Empresarial)' : '(Estudiantil)'}</p>
         <div className="w-full px-2 sm:px-0 flex justify-center">
-          <div
-            className="rounded-lg shadow-lg flex-shrink-0"
-            style={{
-              width: '100%',
-              maxWidth: '350px',
-              minWidth: '280px',
-              aspectRatio: '380 / 240',
-              background: `linear-gradient(135deg, ${customColors.gradientStart} 0%, ${customColors.gradientEnd} 100%)`,
-              border: `2px solid ${customColors.border}`,
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            {/* Header */}
-            <div
-              style={{
-                background: 'white',
-                height: 'clamp(52px, 16vw, 64px)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0 clamp(10px, 3vw, 14px)',
-                borderBottom: `4px solid ${customColors.headerBorder}`,
-                gap: 'clamp(6px, 2vw, 10px)',
-              }}
-            >
-              <div
-                style={{
-                  width: 'clamp(34px, 11vw, 48px)',
-                  height: 'clamp(34px, 11vw, 48px)',
-                  background: '#e5e7eb',
-                  borderRadius: '4px',
-                  flexShrink: 0,
-                }}
-              />
-              <div style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: 'clamp(10px, 3vw, 13px)',
-                    color: customColors.titleColor,
-                    fontWeight: 'bold',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
+          <div className={styles.previewCard} style={previewCardVars}>
+            <div className={styles.previewHeader}>
+              <div className={styles.previewLogo} />
+              <div className={styles.previewTitleWrap}>
+                <div className={styles.previewTitle}>
                   {credentialLevel === 'business' ? 'EMPRESA' : 'COLEGIO'}
                 </div>
-                <div style={{ fontSize: 'clamp(8px, 2.3vw, 10px)', color: '#6b7280', marginTop: '2px' }}>
+                <div className={styles.previewSubtitle}>
                   {credentialLevel === 'business' ? 'Carnet Empresarial' : 'Carnet Estudiantil'}
                 </div>
               </div>
-              <div
-                style={{
-                  width: 'clamp(34px, 11vw, 48px)',
-                  height: 'clamp(34px, 11vw, 48px)',
-                  background: '#e5e7eb',
-                  borderRadius: '4px',
-                  flexShrink: 0,
-                }}
-              />
+              <div className={styles.previewLogo} />
             </div>
 
-            {/* Contenido */}
-            <div
-              style={{
-                display: 'flex',
-                padding: 'clamp(10px, 3.5vw, 16px)',
-                gap: 'clamp(8px, 3vw, 16px)',
-                flex: 1,
-                overflow: 'hidden',
-              }}
-            >
-              {/* Foto */}
-              <div
-                style={{
-                  width: 'clamp(84px, 28vw, 128px)',
-                  height: 'clamp(104px, 34vw, 160px)',
-                  background: 'linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%)',
-                  border: '2px solid white',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 'clamp(24px, 8vw, 40px)',
-                  flexShrink: 0,
-                }}
-              >
+            <div className={styles.previewBody}>
+              <div className={styles.previewPhoto}>
                 👤
               </div>
 
-              {/* Información */}
-              <div
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  gap: 'clamp(4px, 1.5vw, 6px)',
-                  overflow: 'hidden',
-                  minWidth: 0,
-                }}
-              >
-                {/* Campo Nombre */}
-                <div
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    padding: 'clamp(5px, 1.6vw, 9px) clamp(7px, 2.2vw, 12px)',
-                    borderRadius: '4px',
-                    borderLeft: `2px solid ${customColors.labelColor}`,
-                    minWidth: 0,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 'clamp(7px, 2vw, 9px)',
-                      color: customColors.labelColor,
-                      fontWeight: 'bold',
-                      letterSpacing: '0.3px',
-                      lineHeight: '1',
-                    }}
-                  >
+              <div className={styles.previewFields}>
+                <div className={styles.previewField}>
+                  <div className={styles.previewFieldLabel}>
                     NOMBRE
                   </div>
-                  <div
-                    style={{
-                      fontSize: 'clamp(9px, 2.4vw, 11px)',
-                      fontWeight: 'bold',
-                      color: customColors.textColor,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      lineHeight: '1.2',
-                      marginTop: '1px',
-                    }}
-                  >
+                  <div className={styles.previewFieldValue}>
                     Juan Pérez
                   </div>
                 </div>
 
-                {/* Campo Curso/Cargo */}
-                <div
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    padding: 'clamp(5px, 1.6vw, 9px) clamp(7px, 2.2vw, 12px)',
-                    borderRadius: '4px',
-                    borderLeft: `2px solid ${customColors.labelColor}`,
-                    minWidth: 0,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 'clamp(7px, 2vw, 9px)',
-                      color: customColors.labelColor,
-                      fontWeight: 'bold',
-                      letterSpacing: '0.3px',
-                      lineHeight: '1',
-                    }}
-                  >
+                <div className={styles.previewField}>
+                  <div className={styles.previewFieldLabel}>
                     {credentialLevel === 'business' ? 'CARGO' : 'CURSO'}
                   </div>
-                  <div
-                    style={{
-                      fontSize: 'clamp(9px, 2.4vw, 11px)',
-                      fontWeight: 'bold',
-                      color: customColors.textColor,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      lineHeight: '1.2',
-                      marginTop: '1px',
-                    }}
-                  >
+                  <div className={styles.previewFieldValue}>
                     {credentialLevel === 'business' ? 'Analista' : '10-A'}
                   </div>
                 </div>
 
-                {/* Campo ID */}
-                <div
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    padding: 'clamp(5px, 1.6vw, 9px) clamp(7px, 2.2vw, 12px)',
-                    borderRadius: '4px',
-                    borderLeft: `2px solid ${customColors.labelColor}`,
-                    minWidth: 0,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 'clamp(7px, 2vw, 9px)',
-                      color: customColors.labelColor,
-                      fontWeight: 'bold',
-                      letterSpacing: '0.3px',
-                      lineHeight: '1',
-                    }}
-                  >
+                <div className={styles.previewField}>
+                  <div className={styles.previewFieldLabel}>
                     ID
                   </div>
-                  <div
-                    style={{
-                      fontSize: 'clamp(9px, 2.4vw, 11px)',
-                      fontWeight: 'bold',
-                      color: customColors.textColor,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      lineHeight: '1.2',
-                      marginTop: '1px',
-                    }}
-                  >
+                  <div className={styles.previewFieldValue}>
                     1234567890
                   </div>
                 </div>

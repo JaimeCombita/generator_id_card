@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
@@ -8,19 +8,17 @@ import TemplateUploader from '@/components/TemplateUploader';
 import TemplateConfiguration, { TemplateConfig } from '@/components/TemplateConfiguration';
 import { PREDEFINED_PALETTES } from '@/components/ColorCustomizer';
 import GenerateOptions from '@/components/GenerateOptions';
-
-function normalizeIdentifier(value: unknown): string {
-  return String(value ?? '')
-    .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9]/g, '')
-    .toLowerCase();
-}
+import { normalizeIdentifier } from '@/lib/domain/carnet/carnetService';
+import {
+  ALLOWED_PHOTO_EXTENSIONS,
+  UPLOAD_PREVIEW,
+} from '@/lib/infrastructure/config/constants';
+import { logger } from '@/lib/infrastructure/logging/logger';
+import styles from './page.module.css';
 
 function hasValidImageExtension(fileName: string): boolean {
   const extension = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
-  return ['.jpg', '.jpeg', '.png', '.webp'].includes(extension);
+  return ALLOWED_PHOTO_EXTENSIONS.includes(extension as (typeof ALLOWED_PHOTO_EXTENSIONS)[number]);
 }
 
 export default function UploadPage() {
@@ -71,7 +69,9 @@ export default function UploadPage() {
     return previewFilter === 'missing' ? rowsWithoutPhoto : excelData;
   }, [excelData, rowsWithoutPhoto, previewFilter]);
 
-  const rowsPerPage = isMobileViewport ? 5 : 10;
+  const rowsPerPage = isMobileViewport
+    ? UPLOAD_PREVIEW.ROWS_PER_PAGE_MOBILE
+    : UPLOAD_PREVIEW.ROWS_PER_PAGE_DESKTOP;
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / rowsPerPage));
 
   const previewRows = useMemo(() => {
@@ -80,7 +80,7 @@ export default function UploadPage() {
   }, [filteredRows, currentPage, rowsPerPage]);
 
   const visiblePageNumbers = useMemo(() => {
-    const maxVisible = 5;
+    const maxVisible = UPLOAD_PREVIEW.MAX_VISIBLE_PAGES;
     if (totalPages <= maxVisible) {
       return Array.from({ length: totalPages }, (_, index) => index + 1);
     }
@@ -151,7 +151,7 @@ export default function UploadPage() {
     const startCamera = async () => {
       try {
         if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error('Este navegador no soporta acceso a cámara.');
+          throw new Error('Este navegador no soporta acceso a cÃ¡mara.');
         }
 
         stopCameraStream();
@@ -181,8 +181,8 @@ export default function UploadPage() {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
         }
-      } catch (error: any) {
-        setCameraError(error?.message || 'No fue posible iniciar la cámara.');
+      } catch (error: unknown) {
+        setCameraError(error instanceof Error ? error.message : 'No fue posible iniciar la cÃ¡mara.');
       }
     };
 
@@ -219,7 +219,7 @@ export default function UploadPage() {
     }
 
     if (!file.name.toLowerCase().endsWith('.zip')) {
-      setPhotosZipError('El archivo debe ser un ZIP válido (.zip).');
+      setPhotosZipError('El archivo debe ser un ZIP vÃ¡lido (.zip).');
       setPhotosZipFile(null);
       setPhotosZipById(new Set());
       return;
@@ -246,8 +246,11 @@ export default function UploadPage() {
       setPhotosZipFile(file);
       setPhotosZipById(detectedIds);
     } catch (error) {
-      console.error(error);
-      setPhotosZipError('No fue posible leer el ZIP. Verifica que no esté dañado.');
+      logger.error('Failed to parse uploaded photos ZIP', {
+        scope: 'upload.photos-zip',
+        error,
+      });
+      setPhotosZipError('No fue posible leer el ZIP. Verifica que no estÃ© daÃ±ado.');
       setPhotosZipFile(null);
       setPhotosZipById(new Set());
     }
@@ -256,7 +259,7 @@ export default function UploadPage() {
   const openCameraForRow = (row: any) => {
     const id = normalizeIdentifier(row.identificacion);
     if (!id) {
-      setCameraError('La identificación no es válida para asociar una foto.');
+      setCameraError('La identificaciÃ³n no es vÃ¡lida para asociar una foto.');
       return;
     }
 
@@ -314,7 +317,7 @@ export default function UploadPage() {
     }
 
     if (!file.type.startsWith('image/')) {
-      setCameraError('Selecciona un archivo de imagen válido.');
+      setCameraError('Selecciona un archivo de imagen vÃ¡lido.');
       e.target.value = '';
       return;
     }
@@ -380,7 +383,9 @@ export default function UploadPage() {
             Selecciona el tipo para adaptar columnas requeridas, plantilla y detalles.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-            <label className="flex items-center p-3 bg-white rounded-lg border-2 cursor-pointer transition-colors" style={{ borderColor: templateConfig.credentialLevel === 'student' ? '#6366f1' : '#e5e7eb' }}>
+            <label
+              className={`flex items-center p-3 bg-white rounded-lg border-2 cursor-pointer transition-colors ${styles.levelCard} ${templateConfig.credentialLevel === 'student' ? styles.levelCardActive : ''}`}
+            >
               <input
                 type="radio"
                 name="credentialLevelMain"
@@ -390,7 +395,9 @@ export default function UploadPage() {
               />
               <span className="text-xs sm:text-sm font-semibold text-gray-800">Estudiantil</span>
             </label>
-            <label className="flex items-center p-3 bg-white rounded-lg border-2 cursor-pointer transition-colors" style={{ borderColor: templateConfig.credentialLevel === 'business' ? '#6366f1' : '#e5e7eb' }}>
+            <label
+              className={`flex items-center p-3 bg-white rounded-lg border-2 cursor-pointer transition-colors ${styles.levelCard} ${templateConfig.credentialLevel === 'business' ? styles.levelCardActive : ''}`}
+            >
               <input
                 type="radio"
                 name="credentialLevelMain"
@@ -404,7 +411,6 @@ export default function UploadPage() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          {/* Excel Uploader */}
           <ExcelUploader 
             key={`excel-${templateConfig.credentialLevel}`}
             onFileSelect={setExcelFile}
@@ -413,7 +419,6 @@ export default function UploadPage() {
             stepNumber={2}
           />
 
-          {/* Template Uploader */}
           <TemplateUploader 
             onFileSelect={setTemplateFile}
             onDefaultTemplateChange={setUseDefaultTemplate}
@@ -422,7 +427,6 @@ export default function UploadPage() {
           />
         </div>
 
-        {/* Template Configuration - solo visible si usa plantilla por defecto */}
         {useDefaultTemplate && (
           <div className="mb-6 sm:mb-8">
             <TemplateConfiguration 
@@ -448,8 +452,8 @@ export default function UploadPage() {
           </div>
 
           <p className="text-xs sm:text-sm text-gray-600 mb-4">
-            Sube un ZIP con fotos nombradas por identificación (ejemplo: <span className="font-semibold">1005234567.jpg</span>).
-            Si no subes ZIP, se usará placeholder automáticamente.
+            Sube un ZIP con fotos nombradas por identificaciÃ³n (ejemplo: <span className="font-semibold">1005234567.jpg</span>).
+            Si no subes ZIP, se usarÃ¡ placeholder automÃ¡ticamente.
           </p>
 
           <input
@@ -474,18 +478,17 @@ export default function UploadPage() {
 
           {photosZipFile && !photosZipError && (
             <div className="mt-3 p-3 bg-green-50 border-l-4 border-green-500 rounded-lg text-xs sm:text-sm text-green-700">
-              ZIP cargado: <span className="font-semibold">{photosZipFile.name}</span> • IDs detectados: <span className="font-semibold">{photosZipById.size}</span>
+              ZIP cargado: <span className="font-semibold">{photosZipFile.name}</span> â€¢ IDs detectados: <span className="font-semibold">{photosZipById.size}</span>
             </div>
           )}
 
           {Object.keys(capturedPhotosById).length > 0 && (
             <div className="mt-2 p-3 bg-blue-50 border-l-4 border-blue-500 rounded-lg text-xs sm:text-sm text-blue-700">
-              Fotos capturadas desde cámara: <span className="font-semibold">{Object.keys(capturedPhotosById).length}</span>
+              Fotos capturadas desde cÃ¡mara: <span className="font-semibold">{Object.keys(capturedPhotosById).length}</span>
             </div>
           )}
         </div>
 
-        {/* Preview de datos */}
         {excelData.length > 0 && (
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-100 mb-6 sm:mb-8 hover:shadow-xl transition-all duration-300">
             <div className="flex items-center gap-2 sm:gap-3 mb-4">
@@ -499,7 +502,7 @@ export default function UploadPage() {
                   Vista previa y registros sin foto
                 </h2>
                 <p className="text-xs sm:text-sm font-semibold text-gray-600">
-                  {excelData.length} {isBusiness ? 'colaboradores' : 'estudiantes'} • Sin foto: {rowsWithoutPhoto.length}
+                  {excelData.length} {isBusiness ? 'colaboradores' : 'estudiantes'} â€¢ Sin foto: {rowsWithoutPhoto.length}
                 </p>
               </div>
             </div>
@@ -509,22 +512,14 @@ export default function UploadPage() {
                 <button
                   type="button"
                   onClick={() => setPreviewFilter('all')}
-                  className="flex-1 sm:flex-none px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-colors"
-                  style={{
-                    backgroundColor: previewFilter === 'all' ? '#eef2ff' : 'transparent',
-                    color: previewFilter === 'all' ? '#4338ca' : '#374151',
-                  }}
+                  className={`flex-1 sm:flex-none px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-colors ${styles.filterButton} ${previewFilter === 'all' ? styles.filterButtonActiveAll : ''}`}
                 >
                   Todos
                 </button>
                 <button
                   type="button"
                   onClick={() => setPreviewFilter('missing')}
-                  className="flex-1 sm:flex-none px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-colors"
-                  style={{
-                    backgroundColor: previewFilter === 'missing' ? '#fffbeb' : 'transparent',
-                    color: previewFilter === 'missing' ? '#92400e' : '#374151',
-                  }}
+                  className={`flex-1 sm:flex-none px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-colors ${styles.filterButton} ${previewFilter === 'missing' ? styles.filterButtonActiveMissing : ''}`}
                 >
                   Sin foto ({rowsWithoutPhoto.length})
                 </button>
@@ -545,13 +540,13 @@ export default function UploadPage() {
                       {isBusiness ? 'Cargo' : 'Curso'}
                     </th>
                     <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      Identificación
+                      IdentificaciÃ³n
                     </th>
                     <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                       Foto
                     </th>
                     <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      Acción
+                      AcciÃ³n
                     </th>
                   </tr>
                 </thead>
@@ -565,12 +560,12 @@ export default function UploadPage() {
                         {(() => {
                           const id = normalizeIdentifier(row.identificacion);
                           if (capturedPhotosById[id]) {
-                            return '📷 Capturada';
+                            return 'ðŸ“· Capturada';
                           }
                           if (photosZipById.has(id)) {
-                            return '✅ ZIP';
+                            return 'âœ… ZIP';
                           }
-                          return photosZipFile ? '❌ No encontrada' : 'Sin foto (placeholder)';
+                          return photosZipFile ? 'âŒ No encontrada' : 'Sin foto (placeholder)';
                         })()}
                       </td>
                       <td className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500">
@@ -596,7 +591,7 @@ export default function UploadPage() {
               {filteredRows.length > rowsPerPage && (
                 <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-3 sm:px-4 py-2 sm:py-3 border-t border-gray-200 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
                   <p className="text-xs sm:text-sm font-medium text-gray-700 text-center sm:text-left">
-                    Página <span className="font-bold text-indigo-600">{currentPage}</span> de <span className="font-bold text-indigo-600">{totalPages}</span>
+                    PÃ¡gina <span className="font-bold text-indigo-600">{currentPage}</span> de <span className="font-bold text-indigo-600">{totalPages}</span>
                   </p>
                   <div className="flex items-center justify-center gap-1">
                     <button
@@ -612,12 +607,7 @@ export default function UploadPage() {
                         key={page}
                         type="button"
                         onClick={() => setCurrentPage(page)}
-                        className="min-w-8 px-2 py-1 rounded-md text-xs sm:text-sm font-semibold border"
-                        style={{
-                          backgroundColor: page === currentPage ? '#e0e7ff' : '#ffffff',
-                          borderColor: page === currentPage ? '#a5b4fc' : '#e5e7eb',
-                          color: page === currentPage ? '#3730a3' : '#374151',
-                        }}
+                        className={`min-w-8 px-2 py-1 rounded-md text-xs sm:text-sm font-semibold border ${styles.pageNumberButton} ${page === currentPage ? styles.pageNumberButtonActive : ''}`}
                       >
                         {page}
                       </button>
@@ -637,7 +627,6 @@ export default function UploadPage() {
           </div>
         )}
 
-        {/* Opciones de generación */}
         {excelFile && (useDefaultTemplate || templateFile) && excelData.length > 0 && (
           <GenerateOptions 
             excelFile={excelFile}
@@ -716,12 +705,12 @@ export default function UploadPage() {
                     type="button"
                     onClick={() => setCameraFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'))}
                     className="absolute bottom-3 right-3 w-12 h-12 rounded-full bg-black/85 text-white flex items-center justify-center shadow-xl"
-                    aria-label="Cambiar cámara"
-                    title="Cambiar cámara"
+                    aria-label="Cambiar cÃ¡mara"
+                    title="Cambiar cÃ¡mara"
                   >
                     <Image
-                      src="/icons/camera-switch.svg"
-                      alt="Cambiar cámara"
+                      src="/ui/icons/camera-switch.svg"
+                      alt="Cambiar cÃ¡mara"
                       width={34}
                       height={34}
                       className="w-[34px] h-[34px]"
@@ -759,3 +748,4 @@ export default function UploadPage() {
     </main>
   );
 }
+

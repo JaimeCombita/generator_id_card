@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Image from 'next/image';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -20,7 +20,7 @@ export default function Footer() {
           <div className="flex items-center justify-center gap-2 mb-3">
             <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-md border border-gray-100 p-1">
               <Image
-                src="/logo-optimizado.png"
+                src="/brand/logo-main.png"
                 alt="Logo JC Engine"
                 width={32}
                 height={32}
@@ -33,14 +33,15 @@ export default function Footer() {
           </div>
           
           <p className="text-xs sm:text-sm text-gray-600 mb-2">
-            Herramienta profesional para la generación de carnets estudiantiles
+            Herramienta profesional para la generaciÃ³n de carnets estudiantiles
           </p>
           
           <p className="text-xs text-gray-500">
-            © {currentYear} Todos los derechos reservados
+            Â© {currentYear} Todos los derechos reservados
           </p>
         </div>
       </div>
     </footer>
   );
 }
+

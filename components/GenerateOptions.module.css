@@ -1,0 +1,9 @@
+.modeCard {
+  border-color: #e5e7eb;
+  background-color: #ffffff;
+}
+
+.modeCardActive {
+  border-color: #6366f1;
+  background-color: rgba(99, 102, 241, 0.05);
+}

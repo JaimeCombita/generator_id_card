@@ -4,6 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { TemplateConfig } from './TemplateConfiguration';
 import LoadingSpinner from './LoadingSpinner';
+import { normalizeIdentifier } from '@/lib/domain/carnet/carnetService';
+import { RECORD_LIMITS } from '@/lib/infrastructure/config/constants';
+import { logger } from '@/lib/infrastructure/logging/logger';
+import styles from './GenerateOptions.module.css';
 
 interface GenerateOptionsProps {
   excelFile: File;
@@ -106,9 +110,12 @@ export default function GenerateOptions({
               text: 'Guarda el archivo generado en Archivos.',
             });
             return;
-          } catch (shareError: any) {
-            if (shareError?.name !== 'AbortError') {
-              console.error('No fue posible compartir el archivo en iOS:', shareError);
+          } catch (shareError: unknown) {
+            if ((shareError as { name?: string })?.name !== 'AbortError') {
+              logger.warn('iOS share API failed', {
+                scope: 'generate-options.download',
+                error: shareError,
+              });
             }
           }
         }
@@ -123,15 +130,6 @@ export default function GenerateOptions({
         window.URL.revokeObjectURL(url);
       }, 60_000);
     }
-  };
-
-  const normalizeIdentifier = (value: unknown) => {
-    return String(value ?? '')
-      .trim()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9]/g, '')
-      .toLowerCase();
   };
 
   const buildReport = (downloadFileName: string) => {
@@ -189,10 +187,9 @@ export default function GenerateOptions({
     setError('');
     setAdminCodeError('');
 
-    // Limitar a 5 carnets si no hay código de asesor
     const isAdmin = adminCode && adminCode.length > 0;
     const totalCarnets = excelData.length;
-    if (totalCarnets > 5 && !isAdmin && !showAdminInput) {
+    if (totalCarnets > RECORD_LIMITS.FREE_USER && !isAdmin && !showAdminInput) {
       setShowAdminInput(true);
       setIsGenerating(false);
       return;
@@ -232,10 +229,9 @@ export default function GenerateOptions({
         formData.append('templateFile', templateFile);
       }
 
-      // Si no es admin y hay más de 5 carnets, limitar a 5
       let filteredExcelData = excelData;
-      if (totalCarnets > 5 && !isAdmin) {
-        filteredExcelData = excelData.slice(0, 5);
+      if (totalCarnets > RECORD_LIMITS.FREE_USER && !isAdmin) {
+        filteredExcelData = excelData.slice(0, RECORD_LIMITS.FREE_USER);
         formData.append('filteredExcelData', JSON.stringify(filteredExcelData));
       }
 
@@ -267,9 +263,12 @@ export default function GenerateOptions({
       sessionStorage.setItem('generationReport', JSON.stringify(report));
       router.push('/report');
 
-    } catch (err: any) {
-      setError(err.message || 'Error al generar los carnets');
-      console.error(err);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al generar los carnets');
+      logger.error('Generate options request failed', {
+        scope: 'generate-options.request',
+        error: err,
+      });
     } finally {
       setIsGenerating(false);
     }
@@ -297,10 +296,9 @@ export default function GenerateOptions({
         </p>
         
         <div className="space-y-2 sm:space-y-3">
-          <label className="flex items-start p-3 sm:p-4 border-2 rounded-xl cursor-pointer hover:bg-white/50 transition-all duration-300 group" style={{
-            borderColor: mode === 'single' ? '#6366f1' : '#e5e7eb',
-            backgroundColor: mode === 'single' ? 'rgba(99, 102, 241, 0.05)' : 'white'
-          }}>
+          <label
+            className={`flex items-start p-3 sm:p-4 border-2 rounded-xl cursor-pointer hover:bg-white/50 transition-all duration-300 group ${styles.modeCard} ${mode === 'single' ? styles.modeCardActive : ''}`}
+          >
             <input
               type="radio"
               name="mode"
@@ -325,10 +323,9 @@ export default function GenerateOptions({
             </div>
           </label>
 
-          <label className="flex items-start p-3 sm:p-4 border-2 rounded-xl cursor-pointer hover:bg-white/50 transition-all duration-300 group" style={{
-            borderColor: mode === 'multiple' ? '#6366f1' : '#e5e7eb',
-            backgroundColor: mode === 'multiple' ? 'rgba(99, 102, 241, 0.05)' : 'white'
-          }}>
+          <label
+            className={`flex items-start p-3 sm:p-4 border-2 rounded-xl cursor-pointer hover:bg-white/50 transition-all duration-300 group ${styles.modeCard} ${mode === 'multiple' ? styles.modeCardActive : ''}`}
+          >
             <input
               type="radio"
               name="mode"

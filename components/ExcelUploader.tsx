@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
+import { logger } from '@/lib/infrastructure/logging/logger';
 
 interface ExcelUploaderProps {
   onFileSelect: (file: File | null) => void;
@@ -67,7 +68,10 @@ export default function ExcelUploader({ onFileSelect, onDataParsed, credentialLe
     } catch (err) {
       setError('Error al leer el archivo Excel');
       onDataParsed([]);
-      console.error(err);
+      logger.error('Excel parsing failed in uploader', {
+        scope: 'upload.excel',
+        error: err,
+      });
     }
   };
 

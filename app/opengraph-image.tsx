@@ -1,4 +1,4 @@
-import { ImageResponse } from 'next/og';
+﻿import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
 export const alt = 'JC Engine - Generador de Carnets';
@@ -58,7 +58,7 @@ export default function OpenGraphImage() {
             }}
           >
             <img
-              src={`${siteUrl}/logo-optimizado.png`}
+              src={`${siteUrl}/brand/logo-main.png`}
               alt="Logo JC Engine"
               width="88"
               height="88"
@@ -88,3 +88,4 @@ export default function OpenGraphImage() {
     }
   );
 }
+

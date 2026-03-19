@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import styles from './TemplateUploader.module.css';
 
 interface TemplateUploaderProps {
   onFileSelect: (file: File | null) => void;
@@ -107,7 +108,6 @@ export default function TemplateUploader({ onFileSelect, onDefaultTemplateChange
         </h2>
       </div>
       
-      {/* Checkbox para usar plantilla por defecto */}
       <div className="mb-3 sm:mb-4 p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-100">
         <label className="flex items-center cursor-pointer group">
           <input
@@ -143,80 +143,35 @@ export default function TemplateUploader({ onFileSelect, onDefaultTemplateChange
           
           <div className="flex justify-center overflow-x-auto">
             <div className="bg-white rounded-xl shadow-2xl p-3 sm:p-4 inline-block hover:scale-105 transition-transform duration-300">
-              <div style={{
-                width: '280px',
-                minWidth: '280px',
-                height: '180px',
-                background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
-                border: '2px solid #1e40af',
-                borderRadius: '8px',
-                overflow: 'hidden',
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-              }}>
-                {/* Header */}
-                <div style={{
-                  background: 'white',
-                  height: '48px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0 12px',
-                  borderBottom: '3px solid #fbbf24',
-                }}>
-                  <div style={{ width: '36px', height: '36px', background: '#e5e7eb', borderRadius: '4px' }}></div>
-                  <div style={{ flex: 1, textAlign: 'center', padding: '0 8px' }}>
-                    <div style={{ fontSize: '11px', color: '#1e40af', fontWeight: 'bold' }}>
+              <div className={styles.previewCard}>
+                <div className={styles.previewHeader}>
+                  <div className={styles.previewLogoSlot}></div>
+                  <div className={styles.previewHeaderText}>
+                    <div className={styles.previewTitle}>
                       {credentialLevel === 'business' ? 'NOMBRE DE LA EMPRESA' : 'NOMBRE DEL COLEGIO'}
                     </div>
-                    <div style={{ fontSize: '8px', color: '#6b7280', marginTop: '2px' }}>
+                    <div className={styles.previewSubtitle}>
                       {credentialLevel === 'business' ? 'Carnet Empresarial' : 'Carnet Estudiantil'}
                     </div>
                   </div>
-                  <div style={{ width: '36px', height: '36px', background: '#e5e7eb', borderRadius: '4px' }}></div>
+                  <div className={styles.previewLogoSlot}></div>
                 </div>
-                {/* Content */}
-                <div style={{ display: 'flex', padding: '12px', gap: '12px', height: 'calc(100% - 48px)' }}>
-                  <div style={{
-                    width: '100px',
-                    height: '130px',
-                    background: '#e5e7eb',
-                    border: '2px solid white',
-                    borderRadius: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '10px',
-                    color: '#9ca3af',
-                  }}>
+                <div className={styles.previewBody}>
+                  <div className={styles.previewPhoto}>
                     FOTO
                   </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '6px' }}>
-                    <div style={{
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      padding: '6px 10px',
-                      borderRadius: '4px',
-                      borderLeft: '3px solid #fbbf24',
-                    }}>
-                      <div style={{ fontSize: '8px', color: '#fbbf24', fontWeight: 'bold' }}>NOMBRE</div>
-                      <div style={{ fontSize: '11px', fontWeight: 'bold', color: 'white' }}>{credentialLevel === 'business' ? 'Colaborador Ejemplo' : 'Estudiante Ejemplo'}</div>
+                  <div className={styles.previewFields}>
+                    <div className={styles.previewFieldBox}>
+                      <div className={styles.previewLabel}>NOMBRE</div>
+                      <div className={styles.previewValue}>{credentialLevel === 'business' ? 'Colaborador Ejemplo' : 'Estudiante Ejemplo'}</div>
                     </div>
-                    <div style={{
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      padding: '6px 10px',
-                      borderRadius: '4px',
-                      borderLeft: '3px solid #fbbf24',
-                    }}>
-                      <div style={{ fontSize: '8px', color: '#fbbf24', fontWeight: 'bold' }}>{credentialLevel === 'business' ? 'CARGO' : 'CURSO'}</div>
-                      <div style={{ fontSize: '11px', fontWeight: 'bold', color: 'white' }}>{credentialLevel === 'business' ? 'Analista' : '10-A'}</div>
+                    <div className={styles.previewFieldBox}>
+                      <div className={styles.previewLabel}>{credentialLevel === 'business' ? 'CARGO' : 'CURSO'}</div>
+                      <div className={styles.previewValue}>{credentialLevel === 'business' ? 'Analista' : '10-A'}</div>
                     </div>
-                    <div style={{
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      padding: '6px 10px',
-                      borderRadius: '4px',
-                      borderLeft: '3px solid #fbbf24',
-                    }}>
-                      <div style={{ fontSize: '8px', color: '#fbbf24', fontWeight: 'bold' }}>IDENTIFICACIÓN</div>
-                      <div style={{ fontSize: '11px', fontWeight: 'bold', color: 'white' }}>123456789</div>
+                    <div className={styles.previewFieldBox}>
+                      <div className={styles.previewLabel}>IDENTIFICACIÓN</div>
+                      <div className={styles.previewValue}>123456789</div>
                     </div>
                   </div>
                 </div>

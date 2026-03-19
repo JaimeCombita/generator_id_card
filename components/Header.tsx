@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import Image from 'next/image';
@@ -24,7 +24,7 @@ export default function Header() {
           >
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg transition-all border border-gray-100 p-1">
               <Image
-                src="/logo-optimizado.png"
+                src="/brand/logo-main.png"
                 alt="Logo JC Engine"
                 width={40}
                 height={40}
@@ -70,3 +70,4 @@ export default function Header() {
     </header>
   );
 }
+

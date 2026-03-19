@@ -2,6 +2,17 @@
 
 Aplicación Next.js para generar carnets estudiantiles o empresariales desde Excel, con personalización de plantilla, gestión de fotos y descarga en PDF/ZIP.
 
+## 🟢 Estado Actual (Marzo 2026)
+
+- Flujo principal operativo de extremo a extremo: carga de datos, validación, generación y reporte.
+- Activos estáticos reorganizados por dominio en `public/` (`brand`, `pwa`, `samples`, `templates/logos`, `ui/icons`).
+- Capa de logging estructurado integrada en frontend y backend.
+- Persistencia de logs deshabilitada por ahora (solo trazas en ejecución).
+- Manejo de errores reforzado con tipado estricto en bloques `catch` y mensajes de validación más claros.
+- Separación de estilos en componentes TSX aplicada en módulos clave (`upload/page`, `TemplateConfiguration`, `TemplateUploader`, `GenerateOptions`, `LoadingSpinner`).
+- Segunda pasada de estilos aplicada en `ColorCustomizer` con CSS Modules + variables CSS para minimizar inline styles.
+- CI/CD simplificado: GitHub Actions ejecuta pruebas y validaciones; el despliegue lo gestiona Vercel automáticamente por integración GitHub.
+
 ## 🚀 Funcionalidades Implementadas
 
 - Carga y validación de archivo Excel (`.xlsx`, `.xls`)
@@ -71,13 +82,27 @@ Columnas requeridas:
 
 ## ⚙️ Variables de Entorno
 
+Actualmente **no se requiere ninguna variable de entorno** para ejecutar la app localmente ni para el flujo actual de despliegue.
+
+Variables opcionales (solo si decides habilitar analítica/branding adicional):
+
 ```bash
-# URL pública del sitio (sin slash final)
+# URL pública del sitio (opcional)
 NEXT_PUBLIC_SITE_URL=https://app-carnets.jcengine.co
 
 # ID de Google Analytics 4 (opcional)
 NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
 ```
+
+## 🔁 CI/CD actual
+
+- Validaciones automáticas en GitHub Actions:
+  - Tests
+  - TypeScript (`tsc --noEmit`)
+  - Lint
+  - Build
+- No hay pasos de despliegue a Vercel en GitHub Actions.
+- El deploy se ejecuta automáticamente en Vercel mediante su integración con GitHub.
 
 ## 🛠️ Instalación
 
@@ -120,10 +145,11 @@ Si aparece error `EINVAL: invalid argument, readlink ... .next ...`, el proyecto
 
 ## 🔮 Pendiente / Roadmap
 
+- Implementar SEO y analitycs
 - Exportar reporte como CSV/XLSX
 - Vista de paginación completa para asignación de fotos en lotes grandes
 - Edición manual de plantilla en línea
 - Historial de generaciones por usuario
-- Persistencia de reportes en backend
+- Persistencia de reportes/logs en backend
 - Autenticación y roles
 - Integración con almacenamiento en nube (S3/Cloudinary)
