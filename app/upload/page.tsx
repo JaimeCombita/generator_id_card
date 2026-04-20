@@ -27,6 +27,7 @@ export default function UploadPage() {
   const [photosZipFile, setPhotosZipFile] = useState<File | null>(null);
   const [photosZipById, setPhotosZipById] = useState<Set<string>>(new Set());
   const [capturedPhotosById, setCapturedPhotosById] = useState<Record<string, string>>({});
+  const [selectedExcelSheets, setSelectedExcelSheets] = useState<string[]>([]);
   const [cameraTarget, setCameraTarget] = useState<{ id: string; name: string } | null>(null);
   const [photoActionStep, setPhotoActionStep] = useState<'chooser' | 'camera' | null>(null);
   const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('environment');
@@ -203,6 +204,7 @@ export default function UploadPage() {
     }));
     setExcelFile(null);
     setExcelData([]);
+    setSelectedExcelSheets([]);
     setPhotosZipFile(null);
     setPhotosZipById(new Set());
     setCapturedPhotosById({});
@@ -415,6 +417,7 @@ export default function UploadPage() {
             key={`excel-${templateConfig.credentialLevel}`}
             onFileSelect={setExcelFile}
             onDataParsed={setExcelData}
+            onSheetsChange={setSelectedExcelSheets}
             credentialLevel={templateConfig.credentialLevel}
             stepNumber={2}
           />
@@ -634,6 +637,7 @@ export default function UploadPage() {
             photosZipFile={photosZipFile}
             photosZipById={photosZipById}
             capturedPhotosById={capturedPhotosById}
+            selectedExcelSheets={selectedExcelSheets}
             excelData={excelData}
             isGenerating={isGenerating}
             setIsGenerating={setIsGenerating}

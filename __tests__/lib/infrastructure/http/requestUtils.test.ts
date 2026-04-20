@@ -61,10 +61,10 @@ describe('isOriginAllowed', () => {
     expect(isOriginAllowed(req)).toBe(true);
   });
 
-  it('blocks origin NOT in ALLOWED_ORIGINS even if it matches site origin', () => {
+  it('allows same origin even when ALLOWED_ORIGINS does not include it', () => {
     process.env.ALLOWED_ORIGINS = 'https://trusted.com';
     const req = makeRequest({ origin: APP_URL }, `${APP_URL}/api/generate`);
-    expect(isOriginAllowed(req)).toBe(false);
+    expect(isOriginAllowed(req)).toBe(true);
   });
 
   it('blocks origin not in ALLOWED_ORIGINS list', () => {

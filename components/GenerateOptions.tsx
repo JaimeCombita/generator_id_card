@@ -15,6 +15,7 @@ interface GenerateOptionsProps {
   photosZipFile?: File | null;
   photosZipById?: Set<string>;
   capturedPhotosById?: Record<string, string>;
+  selectedExcelSheets?: string[];
   excelData: any[];
   isGenerating: boolean;
   setIsGenerating: (value: boolean) => void;
@@ -30,6 +31,7 @@ export default function GenerateOptions({
   photosZipFile,
   photosZipById,
   capturedPhotosById,
+  selectedExcelSheets,
   excelData,
   isGenerating,
   setIsGenerating,
@@ -200,6 +202,9 @@ export default function GenerateOptions({
       formData.append('excelFile', excelFile);
       formData.append('mode', mode);
       formData.append('useDefaultTemplate', useDefaultTemplate.toString());
+      if (selectedExcelSheets && selectedExcelSheets.length > 0) {
+        formData.append('selectedSheets', JSON.stringify(selectedExcelSheets));
+      }
       if (adminCode) {
         formData.append('adminCode', adminCode);
       }

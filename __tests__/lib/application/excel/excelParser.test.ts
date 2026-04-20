@@ -37,7 +37,7 @@ describe('parseExcelFile', () => {
     expect(result[0]).toHaveProperty('extra', 'value');
   });
 
-  it('reads from the first sheet when multiple sheets exist', async () => {
+  it('reads only from the first sheet by default', async () => {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(
       workbook,
@@ -52,6 +52,27 @@ describe('parseExcelFile', () => {
     const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
     const file = new File([buffer], 'multi.xlsx');
     const result = await parseExcelFile(file);
+    expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({ nombres: 'First Sheet' });
+  });
+
+  it('reads and merges rows from selected sheets', async () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.json_to_sheet([{ nombres: 'First Sheet' }]),
+      'Sheet1',
+    );
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.json_to_sheet([{ nombres: 'Second Sheet' }]),
+      'Sheet2',
+    );
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const file = new File([buffer], 'multi.xlsx');
+    const result = await parseExcelFile(file, ['Sheet1', 'Sheet2']);
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({ nombres: 'First Sheet' });
+    expect(result[1]).toMatchObject({ nombres: 'Second Sheet' });
   });
 });

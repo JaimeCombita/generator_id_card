@@ -37,7 +37,7 @@ export async function buildDefaultTemplate(options: DefaultTemplateOptions): Pro
     html = html
       .replace(/Carnet Estudiantil/g, 'Carnet Empresarial')
       .replace(/>Curso</g, '>Cargo<')
-      .replace(/Logo Colegio/g, 'Logo InstituciÃ³n');
+      .replace(/Logo Colegio/g, 'Logo Institución');
   }
 
   let schoolLogoData = '/templates/logos/logo_colegio.jpg';

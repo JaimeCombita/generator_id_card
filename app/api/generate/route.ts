@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
     const excelFile = formData.get('excelFile') as File;
     const photosZip = formData.get('photosZip') as File | null;
     const capturedPhotosData = formData.get('capturedPhotosData') as string | null;
+    const selectedSheetsRaw = formData.get('selectedSheets') as string | null;
     const mode = formData.get('mode') as string;
     const useDefaultTemplate = formData.get('useDefaultTemplate') === 'true';
     const adminCode = ((formData.get('adminCode') as string | null) ?? '').trim();
@@ -112,7 +113,21 @@ export async function POST(request: NextRequest) {
     }
     const isAdmin = verifyAdminCode(adminCode, envAdminCode);
 
-    let data = await parseExcelFile(excelFile);
+    let selectedSheets: string[] | undefined;
+    if (selectedSheetsRaw) {
+      try {
+        const parsed = JSON.parse(selectedSheetsRaw);
+        if (Array.isArray(parsed)) {
+          selectedSheets = parsed
+            .map((sheet) => String(sheet).trim())
+            .filter(Boolean);
+        }
+      } catch {
+        return NextResponse.json({ error: 'Seleccion de hojas invalida.' }, { status: 400 });
+      }
+    }
+
+    let data = await parseExcelFile(excelFile, selectedSheets);
 
     if (data.length === 0) {
       return NextResponse.json({ error: 'El Excel no contiene registros validos.' }, { status: 400 });
@@ -185,13 +200,22 @@ export async function POST(request: NextRequest) {
 
     const pdfBuffers = await generateMultiplePDFs(data, templateHtml, origin, photosMap, addWatermark);
     const zip = new JSZip();
+    const fileNameCounts = new Map<string, number>();
     pdfBuffers.forEach((buf, idx) => {
       const student = data[idx] ?? {};
       const nombre = (student.nombres || 'carnet').toString().replace(/[^a-zA-Z0-9_-]/g, '_');
       const curso = (student.curso || student.cargo || '').toString().replace(/[^a-zA-Z0-9_-]/g, '_');
       const identificacion = (student.identificacion || '').toString().replace(/[^a-zA-Z0-9_-]/g, '_');
       const base = [nombre, curso || undefined, identificacion || undefined].filter(Boolean).join('_');
-      zip.file(`${base || `carnet_${idx + 1}`}.pdf`, buf);
+      const baseName = base || `carnet_${idx + 1}`;
+      const currentCount = fileNameCounts.get(baseName) ?? 0;
+      fileNameCounts.set(baseName, currentCount + 1);
+
+      const fileName = currentCount === 0
+        ? `${baseName}.pdf`
+        : `${baseName}_${currentCount + 1}.pdf`;
+
+      zip.file(fileName, buf);
     });
 
     const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });

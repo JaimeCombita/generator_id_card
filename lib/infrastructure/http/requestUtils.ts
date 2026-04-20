@@ -15,6 +15,8 @@ export function isOriginAllowed(request: NextRequest): boolean {
   if (!origin) return true;
 
   const currentOrigin = request.nextUrl.origin;
+  if (origin === currentOrigin) return true;
+
   const allowListRaw = process.env.ALLOWED_ORIGINS ?? '';
   const allowList = allowListRaw
     .split(',')
